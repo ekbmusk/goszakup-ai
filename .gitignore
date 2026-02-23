@@ -13,9 +13,4 @@ venv*/
 # Artifacts
 catboost_info/
 data/models/
-catboost_info/
-
-data/models/
-
-*.pyc
->>>>>>> 08842a8b (update gitignore)
+data/processed/
