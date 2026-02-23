@@ -1,8 +1,75 @@
-# GoszakupAI 🇰🇿
+# 🚀 GoszakupAI — FREE Cloud Deployment Ready!
 
 **AI-система анализа рисков в государственных закупках Республики Казахстан**
 
 Система использует машинное обучение, NLP и анализ графов для автоматического выявления потенциально коррупционных практик, картельных сговоров и дискриминационных требований в тендерной документации.
+
+---
+
+## 🎯 Быстрый старт (20 минут)
+
+### ✅ ГОТОВО К ДЕПЛОЮ - Полностью БЕСПЛАТНО!
+
+| Компонент | Платформа | Статус | URL |
+|-----------|-----------|--------|-----|
+| **Backend** | Render.com | ✅ Готов | `https://goszakup-api.onrender.com` |
+| **Frontend** | GitHub Pages | ✅ Готов | `https://github-username.github.io/goszakup-frontend` |
+| **Custom domain** | Ваш домен | ⚙️ Опционально | `https://api.yourdomain.com` |
+
+### 💰 Стоимость: **0$ в месяц** (+ домен ~10$/год)
+
+### 🚀 Начните отсюда:
+
+1. **[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)** — Пошаговая инструкция (20 мин)
+2. **[DEPLOY_RENDER_GITHUB.md](DEPLOY_RENDER_GITHUB.md)** — Подробное руководство с кодом
+
+---
+
+## 🎬 Local Development
+
+### 1️⃣ Подготовка окружения
+
+```bash
+# Клонируйте и перейдите в репозиторий
+git clone https://github.com/ekbmusk/goszakup-ai.git
+cd goszakup-ai
+
+# Создайте виртуальное окружение
+python3.11 -m venv .venv311
+source .venv311/bin/activate  # Linux/Mac
+# или .venv311\Scripts\activate  # Windows
+
+# Установите зависимости
+pip install -r requirements.txt
+```
+
+### 2️⃣ Запуск backend
+
+```bash
+# Запустите FastAPI сервер
+uvicorn src.api.routes:app --host 127.0.0.1 --port 8006 --reload
+
+# API: http://localhost:8006
+# Swagger docs: http://localhost:8006/docs
+```
+
+### 3️⃣ API Endpoints
+
+```bash
+# Проверка статуса
+curl http://localhost:8006/api/health
+
+# Получить все лоты
+curl http://localhost:8006/api/lots
+
+# Анализ лота
+curl http://localhost:8006/api/lot/100000001
+
+# Анализ нескольких
+curl -X POST http://localhost:8006/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"lot_ids": ["100000001", "100000002"]}'
+```
 
 ---
 
@@ -25,48 +92,7 @@
 - Python 3.11+
 - Docker (опционально)
 
-### Локальная установка
 
-```bash
-# Клонируйте репозиторий
-git clone https://github.com/your-username/goszakup-ai.git
-cd goszakup-ai
-
-# Создайте виртуальное окружение
-python3 -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# .venv\Scripts\activate  # Windows
-
-# Установите зависимости
-pip install -r requirements.txt
-
-# Настройте переменные окружения
-cp env.example .env
-# Отредактируйте .env и добавьте ваш GOSZAKUP_TOKEN (опционально)
-
-# Запустите анализ
-python main.py
-
-# Или запустите FastAPI сервер
-uvicorn src.api.routes:app --reload --port 8006
-```
-
-### Docker
-
-```bash
-# Запуск через Docker Compose
-docker-compose up -d
-
-# API будет доступен на http://localhost:8000
-```
-
----
-
-## 📚 Документация
-
-- [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - Обзор реализации
-- [GRAPHQL_GUIDE.md](GRAPHQL_GUIDE.md) - GraphQL клиент и пагинация
-- [SECURITY.md](SECURITY.md) - Безопасность и best practices
 
 ---
 
