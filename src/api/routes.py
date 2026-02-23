@@ -81,6 +81,12 @@ class HealthResponse(BaseModel):
     analyzer_ready: bool
 
 
+@app.get("/health")
+async def health_simple():
+    """Simple health check for Docker healthcheck"""
+    return {"status": "ok"}
+
+
 @app.get("/api/health", response_model=HealthResponse)
 async def health():
     return HealthResponse(

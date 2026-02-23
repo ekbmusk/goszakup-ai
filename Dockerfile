@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -U pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+COPY src/ ./src/
+COPY data/ ./data/
+COPY main.py .
+
+EXPOSE 8006
+
+
+CMD ["uvicorn", "src.api.routes:app", "--host", "0.0.0.0", "--port", "8006"]

@@ -1,7 +1,20 @@
-.venv311
+# Python venv
+.venv*/
+venv*/
+*.pyc
 
+# Node
 node_modules/
-
 __pycache__/
 
+# IDE
 .vscode/
+.idea/
+
+
+
+
+
+
+# OS
+.DS_Store

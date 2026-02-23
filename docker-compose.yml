@@ -2,18 +2,41 @@ version: "3.9"
 
 services:
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: goszakup-api
     ports:
-      - "8000:8000"
+      - "8006:8006"
     environment:
       - GOSZAKUP_TOKEN=${GOSZAKUP_TOKEN:-}
+      - PYTHONUNBUFFERED=1
     volumes:
       - ./data:/app/data
+      - ./src:/app/src
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: goszakup-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
     restart: unless-stopped
 
   # Uncomment when ready for PostgreSQL + pgvector
   # db:
   #   image: pgvector/pgvector:pg16
+  #   container_name: goszakup-db
   #   environment:
   #     POSTGRES_DB: goszakup
   #     POSTGRES_USER: goszakup
@@ -22,14 +45,7 @@ services:
   #     - pgdata:/var/lib/postgresql/data
   #   ports:
   #     - "5432:5432"
-
-  # Uncomment when frontend is ready
-  # frontend:
-  #   build: ./frontend
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - api
+  #   restart: unless-stopped
 
 # volumes:
 #   pgdata:
