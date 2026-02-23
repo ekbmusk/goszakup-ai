@@ -12,7 +12,10 @@ services:
     branch: main
     
     # Build & Start
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      python --version
+      pip install --upgrade pip
+      pip install -r requirements.txt
     startCommand: uvicorn src.api.routes:app --host 0.0.0.0 --port $PORT --workers 1
     
     # Бесплатный план
