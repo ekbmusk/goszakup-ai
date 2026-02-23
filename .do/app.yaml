@@ -1,0 +1,52 @@
+name: goszakup-ai
+region: fra
+
+services:
+  - name: api
+    github:
+      repo: ekbmusk/goszakup-ai
+      branch: main
+      deploy_on_push: true
+    
+    build_command: pip install -r requirements.txt
+    
+    run_command: uvicorn src.api.routes:app --host 0.0.0.0 --port 8080 --workers 2
+    
+    envs:
+      - key: GOSZAKUP_TOKEN
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+      - key: FORCE_TRAIN
+        value: "false"
+        scope: RUN_TIME
+      - key: EXPORT_TRAIN_DATA
+        value: "false"
+        scope: RUN_TIME
+      - key: API_KEY
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+        value: "your-api-key-here"
+    
+    instance_count: 1
+    instance_size_slug: basic-s
+    
+    http_port: 8080
+    
+    health_check:
+      http_path: /api/health
+      initial_delay_seconds: 60
+      timeout_seconds: 10
+      period_seconds: 30
+      success_threshold: 1
+      failure_threshold: 3
+    
+    routes:
+      - path: /
+
+# Если понадобится база данных:
+# databases:
+#   - name: goszakup-db
+#     engine: PG
+#     version: "16"
+#     size: basic-xs
+#     num_nodes: 1
