@@ -32,11 +32,25 @@ class RiskScorer:
             logger.warning("[Scorer] Too few samples to train. Need at least 10.")
             return
 
+        logger.info(f"[Scorer] Starting training with {len(features_list)} samples")
+        
         X = np.array([f.to_feature_vector() for f in features_list])
 
         if labels is None and rule_scores is not None:
             threshold = 50.0
             labels = [1 if s >= threshold else 0 for s in rule_scores]
+            positive_count = sum(labels)
+            
+            # If we have only one class, adjust threshold to create balance
+            if len(set(labels)) < 2:
+                logger.warning(f"[Scorer] Generated labels have only one class. Adjusting threshold...")
+                # Try different thresholds to find one that splits the data
+                for thresh in [np.median(rule_scores), np.percentile(rule_scores, 75), np.percentile(rule_scores, 25)]:
+                    labels = [1 if s >= thresh else 0 for s in rule_scores]
+                    if len(set(labels)) >= 2:
+                        logger.info(f"[Scorer] Using threshold {thresh:.1f}, got {sum(labels)} positive samples")
+                        break
+            
             logger.info(
                 f"[Scorer] Using pseudo-labels from rules. "
                 f"Positive: {sum(labels)}, Negative: {len(labels) - sum(labels)}"
@@ -51,53 +65,81 @@ class RiskScorer:
             from catboost import CatBoostClassifier
 
             if len(set(y)) < 2:
-                logger.warning("[Scorer] Only one class in labels. Adding synthetic samples.")
+                logger.warning("[Scorer] Only one class in labels. Adding synthetic minority samples.")
                 if 1 not in y:
-                    y[-1] = 1
+                    y[-max(1, len(y) // 20):] = 1
                 elif 0 not in y:
-                    y[-1] = 0
+                    y[-max(1, len(y) // 20):] = 0
+                logger.info(f"[Scorer] After synthetic balancing: {sum(y)} positive, {len(y) - sum(y)} negative")
 
-            self._catboost_model = CatBoostClassifier(
-                iterations=min(CATBOOST_ITERATIONS, max(50, len(X) * 2)),
-                depth=CATBOOST_DEPTH,
-                learning_rate=CATBOOST_LR,
-                loss_function="Logloss",
-                eval_metric="AUC",
-                verbose=False,
-                random_seed=42,
-            )
-
-            split = int(len(X) * 0.8)
-            if split < 5:
-                self._catboost_model.fit(X, y)
+            if len(set(y)) < 2:
+                logger.warning("[Scorer] Still one class after balancing. Skipping CatBoost training.")
+                self._catboost_model = None
             else:
-                self._catboost_model.fit(
-                    X[:split], y[:split],
-                    eval_set=(X[split:], y[split:]),
-                    early_stopping_rounds=20,
+                logger.info(
+                    f"[Scorer] CatBoost config: iterations={min(CATBOOST_ITERATIONS, max(50, len(X) * 2))}, "
+                    f"depth={CATBOOST_DEPTH}, lr={CATBOOST_LR}"
                 )
-            logger.info("[Scorer] CatBoost trained successfully")
 
-        except ImportError:
-            logger.warning("[Scorer] CatBoost not installed. pip install catboost")
+                self._catboost_model = CatBoostClassifier(
+                    iterations=min(CATBOOST_ITERATIONS, max(50, len(X) * 2)),
+                    depth=CATBOOST_DEPTH,
+                    learning_rate=CATBOOST_LR,
+                    loss_function="Logloss",
+                    eval_metric="AUC",
+                    verbose=False,
+                    random_seed=42,
+                )
+
+                rng = np.random.default_rng(42)
+                indices = rng.permutation(len(X))
+                X_shuffled = X[indices]
+                y_shuffled = y[indices]
+
+                split = int(len(X_shuffled) * 0.8)
+                if split < 5:
+                    logger.info("[Scorer] Training CatBoost without validation split")
+                    self._catboost_model.fit(X_shuffled, y_shuffled)
+                else:
+                    logger.info(
+                        f"[Scorer] Training CatBoost with validation split: {split} train, {len(X)-split} eval"
+                    )
+                    y_train = y_shuffled[:split]
+                    y_eval = y_shuffled[split:]
+                    if len(set(y_train)) < 2 or len(set(y_eval)) < 2:
+                        logger.warning("[Scorer] Validation split has one class. Training without eval set.")
+                        self._catboost_model.fit(X_shuffled, y_shuffled)
+                    else:
+                        self._catboost_model.fit(
+                            X_shuffled[:split], y_train,
+                            eval_set=(X_shuffled[split:], y_eval),
+                            early_stopping_rounds=20,
+                        )
+                logger.info(f"[Scorer] ✅ CatBoost trained successfully on {len(X)} samples")
+
+        except ImportError as e:
+            logger.error(f"[Scorer] ❌ CatBoost import error: {e}")
+            self._catboost_model = None
         except Exception as e:
-            logger.error(f"[Scorer] CatBoost training failed: {e}")
+            logger.error(f"[Scorer] ❌ CatBoost training failed: {e}", exc_info=True)
+            self._catboost_model = None
 
         try:
             from sklearn.ensemble import IsolationForest
 
+            logger.info("[Scorer] Training Isolation Forest...")
             self._isolation_forest = IsolationForest(
                 n_estimators=100,
                 contamination=0.15,
                 random_state=42,
             )
             self._isolation_forest.fit(X)
-            logger.info("[Scorer] Isolation Forest trained successfully")
+            logger.info(f"[Scorer] ✅ Isolation Forest trained successfully on {len(X)} samples")
 
-        except ImportError:
-            logger.warning("[Scorer] scikit-learn not installed.")
+        except ImportError as e:
+            logger.error(f"[Scorer] ❌ scikit-learn import error: {e}")
         except Exception as e:
-            logger.error(f"[Scorer] Isolation Forest training failed: {e}")
+            logger.error(f"[Scorer] ❌ Isolation Forest training failed: {e}", exc_info=True)
 
         self._is_fitted = True
 

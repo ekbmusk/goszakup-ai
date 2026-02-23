@@ -27,14 +27,14 @@ GOSZAKUP_GRAPHQL_URL = f"{GOSZAKUP_BASE_URL}/v3/graphql"
 API_KEY = os.getenv("API_KEY", "")
 CORS_ALLOWED_ORIGINS = _parse_csv_env(
     os.getenv("CORS_ALLOWED_ORIGINS", 
-             "http://127.0.0.1:8006,https://*.github.io,https://*.pages.dev,https://afm.software,https://www.afm.software"),
+             "http://127.0.0.1:8006,http://localhost:8006,http://localhost:3000,https://*.github.io,https://*.pages.dev,https://afm.software,https://www.afm.software"),
     ["http://127.0.0.1:8006", "http://localhost:8006", "http://localhost:3000", "null"],
 )
 
 # Обучение
 FORCE_TRAIN = os.getenv("FORCE_TRAIN", "0").strip().lower() in {"1", "true", "yes"}
 EXPORT_TRAIN_DATA = os.getenv("EXPORT_TRAIN_DATA", "0").strip().lower() in {"1", "true", "yes"}
-LABELS_CSV = os.getenv("LABELS_CSV", "").strip()
+LABELS_CSV = os.getenv("LABELS_CSV", str(PROCESSED_DIR / "labels.csv")).strip()
 
 # Пороги риска
 RISK_THRESHOLDS = {

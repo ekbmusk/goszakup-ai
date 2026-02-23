@@ -1,0 +1,47 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run FastAPI server",
+			"type": "shell",
+			"command": "uvicorn",
+			"args": [
+				"src.api.routes:app",
+				"--reload",
+				"--port",
+				"8006"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run FastAPI server",
+			"type": "shell",
+			"command": "uvicorn",
+			"args": [
+				"src.api.routes:app",
+				"--reload",
+				"--port",
+				"8006"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run FastAPI server",
+			"type": "shell",
+			"command": "uvicorn",
+			"args": [
+				"src.api.routes:app",
+				"--reload",
+				"--port",
+				"8006"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

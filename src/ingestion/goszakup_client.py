@@ -25,7 +25,7 @@ class GoszakupClient:
     """Клиент для API goszakup.gov.kz (v3)."""
 
     def __init__(self, token: str | None = None):
-        self.token = token or GOSZAKUP_TOKEN
+        self.token = GOSZAKUP_TOKEN if token is None else token
         self.base_url = GOSZAKUP_BASE_URL
         self.use_mock = not bool(self.token)
 
@@ -59,23 +59,49 @@ class GoszakupClient:
         self._mock_data = self._load_mock_data()
 
     def _load_mock_data(self) -> list[dict]:
-        """Загружает мок-данные из схемы или генерирует их."""
+        """Загружает реальные данные или мок-данные из схемы/файла."""
+        # Try to load real data first (from converted goszakup.gov.kz data)
+        real_path = RAW_DIR / "real_lots.json"
+        if real_path.exists():
+            try:
+                with open(real_path, "r", encoding="utf-8") as f:
+                    real_data = json.load(f)
+                logger.info(f"[GoszakupClient] ✅ Loaded {len(real_data)} real lots from {real_path}")
+                return real_data
+            except json.JSONDecodeError as e:
+                logger.error(f"[GoszakupClient] ❌ JSON parsing error in {real_path}: {e}")
+            except Exception as e:
+                logger.error(f"[GoszakupClient] ❌ Failed to load real data: {e}", exc_info=True)
+        else:
+            logger.warning(f"[GoszakupClient] Real data file not found: {real_path}")
+        
+        # Fall back to schema mock
         schema_path = RAW_DIR / "goszakup_schema_mock.json"
         try:
             from src.ingestion.goszakup_mock import build_internal_lots, save_schema_mock
 
             if schema_path.exists():
+                logger.info(f"[GoszakupClient] Loading mock schema from {schema_path}")
                 with open(schema_path, "r", encoding="utf-8") as f:
                     schema_data = json.load(f)
-                return build_internal_lots(schema_data)
+                mock_lots = build_internal_lots(schema_data)
+                logger.info(f"[GoszakupClient] Built {len(mock_lots)} lots from schema")
+                return mock_lots
 
+            logger.info("[GoszakupClient] Creating schema mock...")
             return save_schema_mock(RAW_DIR / "mock_lots.json")
-        except Exception:
-            mock_path = RAW_DIR / "mock_lots.json"
-            if mock_path.exists():
-                with open(mock_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            return []
+        except Exception as e:
+            logger.warning(f"[GoszakupClient] Schema mock loading failed: {e}")
+        
+        # Last resort - direct mock file
+        mock_path = RAW_DIR / "mock_lots.json"
+        if mock_path.exists():
+            logger.info(f"[GoszakupClient] Loading direct mock file: {mock_path}")
+            with open(mock_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        
+        logger.error("[GoszakupClient] ❌ No data source available!")
+        return []
 
     def _get(self, endpoint: str, params: dict | None = None) -> dict:
         """GET-запрос с повторами."""

@@ -3,6 +3,9 @@ GoszakupAI — FastAPI Backend
 REST API for the analysis platform.
 """
 import logging
+import csv
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 from contextlib import asynccontextmanager
 
@@ -11,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from src.model.analyzer import GoszakupAnalyzer
-from src.utils.config import CORS_ALLOWED_ORIGINS
+from src.utils.config import CORS_ALLOWED_ORIGINS, LABELS_CSV
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +27,11 @@ async def lifespan(app: FastAPI):
     logger.info("[API] Starting GoszakupAI...")
     analyzer = GoszakupAnalyzer(use_transformers=False)
     analyzer.initialize()
+    analyzer.start_background_analysis(batch_size=50, sleep_seconds=0.05)
     logger.info("[API] Analyzer ready")
     yield
+    if analyzer:
+        analyzer.save_analysis_cache()
     logger.info("[API] Shutting down")
 
 
@@ -36,11 +42,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Ensure localhost is always in the allowed origins for development
+allowed_origins = list(set(CORS_ALLOWED_ORIGINS + [
+    "http://localhost:3000",
+    "http://localhost:8006",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8006",
+]))
+
+logger.info(f"[API] CORS Allowed Origins: {allowed_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ALLOWED_ORIGINS,
+    allow_origins=allowed_origins,
     allow_credentials=False,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -51,6 +67,12 @@ class AnalyzeTextRequest(BaseModel):
     participants_count: int = 0
     deadline_days: int = 0
     category_code: str = ""
+
+
+class FeedbackRequest(BaseModel):
+    lot_id: str
+    label: int
+    comment: str | None = None
 
 
 class HealthResponse(BaseModel):
@@ -80,7 +102,8 @@ async def list_lots(
     if not analyzer:
         raise HTTPException(503, "Analyzer not ready")
 
-    results = analyzer.analyze_all()
+    analyzer.analyze_incremental(max_new=50)
+    results = analyzer.get_cached_results()
 
     if risk_level:
         results = [r for r in results if r.final_level == risk_level.upper()]
@@ -157,10 +180,37 @@ async def analyze_text(request: AnalyzeTextRequest):
     return result.to_dict()
 
 
+@app.post("/api/feedback")
+async def submit_feedback(request: FeedbackRequest):
+    if not analyzer:
+        raise HTTPException(503, "Analyzer not ready")
+
+    if request.label not in (0, 1):
+        raise HTTPException(400, "label must be 0 or 1")
+
+    labels_path = Path(LABELS_CSV)
+    labels_path.parent.mkdir(parents=True, exist_ok=True)
+
+    is_new = not labels_path.exists()
+    with open(labels_path, "a", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        if is_new:
+            writer.writerow(["lot_id", "label", "comment", "created_at"])
+        writer.writerow([
+            request.lot_id,
+            request.label,
+            request.comment or "",
+            datetime.now(timezone.utc).isoformat(),
+        ])
+
+    return {"status": "ok"}
+
+
 @app.get("/api/stats/dashboard")
 async def dashboard_stats():
     if not analyzer:
         raise HTTPException(503, "Analyzer not ready")
+    analyzer.analyze_incremental(max_new=50)
     return analyzer.get_dashboard_stats()
 
 
