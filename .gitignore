@@ -3,18 +3,19 @@
 venv*/
 *.pyc
 
-# Node
-node_modules/
-__pycache__/
-
 # IDE
 .vscode/
 .idea/
 
-
-
-
-
-
 # OS
 .DS_Store
+
+# Artifacts
+catboost_info/
+data/models/
+catboost_info/
+
+data/models/
+
+*.pyc
+>>>>>>> 08842a8b (update gitignore)
