@@ -27,21 +27,15 @@ class GoszakupClient:
     def __init__(self, token: str | None = None):
         self.token = GOSZAKUP_TOKEN if token is None else token
         self.base_url = GOSZAKUP_BASE_URL
-        self.use_mock = not bool(self.token)
 
-        if self.use_mock:
-            logger.warning(
-                "[GoszakupClient] No token provided. Using mock data. "
-                "Set GOSZAKUP_TOKEN in .env to use real API."
-            )
-            self._mock_data = self._load_mock_data()
-        elif not HAS_HTTPX:
-            logger.warning(
-                "[GoszakupClient] httpx not installed, falling back to mock data."
-            )
-            self.use_mock = True
-            self._mock_data = self._load_mock_data()
-        else:
+        # В этом проекте источник данных — готовый файл lot_details.json (или real_lots.json после конвертации).
+        # Даже без токена работаем только с локальными данными, без моков/генерации.
+        self.use_local_data = True
+        self._local_data = self._load_local_data()
+
+        # Поддерживаем реальный API только если явно задан токен и установлен httpx
+        self.use_remote_api = bool(self.token) and HAS_HTTPX
+        if self.use_remote_api:
             self._client = httpx.Client(
                 base_url=self.base_url,
                 headers={
@@ -50,63 +44,39 @@ class GoszakupClient:
                 },
                 timeout=30.0,
             )
-
-    def _enable_mock(self, reason: str) -> None:
-        if self.use_mock:
-            return
-        logger.warning(f"[GoszakupClient] Falling back to mock data: {reason}")
-        self.use_mock = True
-        self._mock_data = self._load_mock_data()
-
-    def _load_mock_data(self) -> list[dict]:
-        """Загружает реальные данные или мок-данные из схемы/файла."""
-        # Try to load real data first (from converted goszakup.gov.kz data)
-        real_path = RAW_DIR / "real_lots.json"
-        if real_path.exists():
-            try:
-                with open(real_path, "r", encoding="utf-8") as f:
-                    real_data = json.load(f)
-                logger.info(f"[GoszakupClient] ✅ Loaded {len(real_data)} real lots from {real_path}")
-                return real_data
-            except json.JSONDecodeError as e:
-                logger.error(f"[GoszakupClient] ❌ JSON parsing error in {real_path}: {e}")
-            except Exception as e:
-                logger.error(f"[GoszakupClient] ❌ Failed to load real data: {e}", exc_info=True)
         else:
-            logger.warning(f"[GoszakupClient] Real data file not found: {real_path}")
-        
-        # Fall back to schema mock
-        schema_path = RAW_DIR / "goszakup_schema_mock.json"
-        try:
-            from src.ingestion.goszakup_mock import build_internal_lots, save_schema_mock
+            if self.token and not HAS_HTTPX:
+                logger.warning("[GoszakupClient] httpx not installed; using local lot_details.json")
+            if not self.token:
+                logger.info("[GoszakupClient] Using local lot_details.json as data source (no token provided)")
 
-            if schema_path.exists():
-                logger.info(f"[GoszakupClient] Loading mock schema from {schema_path}")
-                with open(schema_path, "r", encoding="utf-8") as f:
-                    schema_data = json.load(f)
-                mock_lots = build_internal_lots(schema_data)
-                logger.info(f"[GoszakupClient] Built {len(mock_lots)} lots from schema")
-                return mock_lots
+    def _load_local_data(self) -> list[dict]:
+        """Загружает лоты только из готовых файлов lot_details.json или real_lots.json."""
+        # Предпочитаем lot_details.json (как источник пользователя)
+        lot_details_path = RAW_DIR / "lot_details.json"
+        real_path = RAW_DIR / "real_lots.json"  # результат конвертера из lot_details.jsonl
 
-            logger.info("[GoszakupClient] Creating schema mock...")
-            return save_schema_mock(RAW_DIR / "mock_lots.json")
-        except Exception as e:
-            logger.warning(f"[GoszakupClient] Schema mock loading failed: {e}")
-        
-        # Last resort - direct mock file
-        mock_path = RAW_DIR / "mock_lots.json"
-        if mock_path.exists():
-            logger.info(f"[GoszakupClient] Loading direct mock file: {mock_path}")
-            with open(mock_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        
-        logger.error("[GoszakupClient] ❌ No data source available!")
-        return []
+        for path in (lot_details_path, real_path):
+            if path.exists():
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    logger.info(f"[GoszakupClient] ✅ Loaded {len(data)} lots from {path}")
+                    return data
+                except json.JSONDecodeError as e:
+                    logger.error(f"[GoszakupClient] ❌ JSON parsing error in {path}: {e}")
+                except Exception as e:
+                    logger.error(f"[GoszakupClient] ❌ Failed to load data from {path}: {e}", exc_info=True)
+
+        # Если не нашли ни одного источника — это ошибка конфигурации
+        raise RuntimeError(
+            "No lot data found. Please provide data/raw/lot_details.json (or run convert_lot_details.py)."
+        )
 
     def _get(self, endpoint: str, params: dict | None = None) -> dict:
         """GET-запрос с повторами."""
-        if self.use_mock:
-            raise RuntimeError("Real API not available. Using mock data.")
+        if self.use_local_data or not self.use_remote_api:
+            raise RuntimeError("Remote API is disabled; using local lot_details.json")
 
         max_retries = 3
         for attempt in range(max_retries):
@@ -123,21 +93,20 @@ class GoszakupClient:
 
     def get_lots(self, page: int = 0, size: int = 20) -> list[dict]:
         """Возвращает список лотов закупок."""
-        if self.use_mock:
+        if self.use_local_data:
             start = page * size
-            return self._mock_data[start:start + size]
+            return self._local_data[start:start + size]
         try:
             data = self._get("/v3/lots", {"limit": size, "offset": page * size})
             return data.get("items", data.get("data", []))
         except Exception as exc:
-            self._enable_mock(f"get_lots failed: {exc}")
-            start = page * size
-            return self._mock_data[start:start + size]
+            logger.error(f"[GoszakupClient] get_lots failed from remote API: {exc}")
+            raise
 
     def get_lot_by_id(self, lot_id: str) -> dict | None:
         """Возвращает лот по идентификатору."""
-        if self.use_mock:
-            for lot in self._mock_data:
+        if self.use_local_data:
+            for lot in self._local_data:
                 if str(lot.get("lot_id")) == str(lot_id):
                     return lot
             return None
@@ -146,8 +115,8 @@ class GoszakupClient:
 
     def get_trd_buy(self, trd_buy_id: str) -> dict:
         """Возвращает объявление о закупке."""
-        if self.use_mock:
-            for lot in self._mock_data:
+        if self.use_local_data:
+            for lot in self._local_data:
                 if lot.get("trd_buy_id") == trd_buy_id:
                     return lot
             return {}
@@ -155,9 +124,9 @@ class GoszakupClient:
 
     def get_contracts(self, lot_id: str | None = None, page: int = 0, size: int = 20) -> list[dict]:
         """Возвращает контракты, при необходимости по лоту."""
-        if self.use_mock:
+        if self.use_local_data:
             contracts = []
-            for lot in self._mock_data:
+            for lot in self._local_data:
                 contracts.append({
                     "contract_id": f"CNT-{lot['lot_id']}",
                     "lot_id": lot["lot_id"],
@@ -178,7 +147,7 @@ class GoszakupClient:
 
     def get_subject(self, bin_iin: str) -> dict:
         """Возвращает сведения об участнике по БИН/ИИН."""
-        if self.use_mock:
+        if self.use_local_data:
             return {
                 "bin": bin_iin,
                 "name_ru": f"Организация {bin_iin}",
@@ -188,19 +157,16 @@ class GoszakupClient:
 
     def get_rnu(self, page: int = 0, size: int = 20) -> list[dict]:
         """Возвращает реестр недобросовестных поставщиков."""
-        if self.use_mock:
-            return [
-                {"bin": SUPPLIER_BINS[0], "reason": "Неисполнение обязательств"},
-                {"bin": SUPPLIER_BINS[1], "reason": "Предоставление ложных сведений"},
-            ]
+        if self.use_local_data:
+            return []
         data = self._get("/v3/rnu", {"limit": size, "offset": page * size})
         return data.get("items", [])
 
     def graphql_query(self, query: str, variables: dict | None = None) -> dict:
         """Выполняет GraphQL-запрос."""
-        if self.use_mock:
-            logger.info("[GraphQL] Mock mode — returning mock data")
-            return {"data": {"lots": self._mock_data[:20]}}
+        if self.use_local_data:
+            logger.info("[GraphQL] Local mode — returning preloaded data")
+            return {"data": {"lots": self._local_data[:20]}}
 
         resp = self._client.post(
             "/v3/graphql",
@@ -242,15 +208,15 @@ class GoszakupClient:
                 break
             all_lots.extend(lots)
             logger.info(f"[Collect] Page {page}: {len(lots)} lots (total: {len(all_lots)})")
-            if not self.use_mock:
+            if self.use_remote_api:
                 time.sleep(0.5)
         return all_lots
 
     def get_total_lots(self) -> int:
         """Возвращает количество лотов."""
-        if self.use_mock:
-            return len(self._mock_data)
-        return len(self._mock_data) if self.use_mock else 0
+        if self.use_local_data:
+            return len(self._local_data)
+        return 0
 
     def close(self):
         """Закрывает HTTP-клиент."""
@@ -262,6 +228,3 @@ class GoszakupClient:
 
     def __exit__(self, *args):
         self.close()
-
-
-from src.ingestion.mock_data import SUPPLIER_BINS

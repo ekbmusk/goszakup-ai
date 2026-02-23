@@ -33,7 +33,6 @@ logger = logging.getLogger(__name__)
 
 def run_analysis():
     """Запускает полный анализ на доступных данных."""
-    from src.ingestion.mock_data import save_mock_data
     from src.model.analyzer import GoszakupAnalyzer
     from src.utils.config import PROCESSED_DIR
 
@@ -41,11 +40,9 @@ def run_analysis():
     logger.info("GoszakupAI — Анализ рисков государственных закупок РК")
     logger.info("=" * 60)
 
-    lots = save_mock_data()
-
     logger.info("\n[2/4] Инициализация анализатора...")
     analyzer = GoszakupAnalyzer(use_transformers=False)
-    analyzer.initialize(lots=lots)
+    analyzer.initialize()
 
     logger.info("\n[3/4] Анализ лотов...")
     results = analyzer.analyze_all()
