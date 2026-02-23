@@ -26,8 +26,9 @@ GOSZAKUP_GRAPHQL_URL = f"{GOSZAKUP_BASE_URL}/v3/graphql"
 # Безопасность API
 API_KEY = os.getenv("API_KEY", "")
 CORS_ALLOWED_ORIGINS = _parse_csv_env(
-    os.getenv("CORS_ALLOWED_ORIGINS", "http://127.0.0.1:8006,null"),
-    ["http://127.0.0.1:8006", "null"],
+    os.getenv("CORS_ALLOWED_ORIGINS", 
+             "http://127.0.0.1:8006,https://*.github.io,https://*.pages.dev"),
+    ["http://127.0.0.1:8006", "http://localhost:8006", "null"],
 )
 
 # Обучение
