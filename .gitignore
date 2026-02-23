@@ -55,3 +55,6 @@ labels.csv
 *.key
 *.pem
 *.p12
+
+#node_modules
+node_modules/
