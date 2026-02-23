@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - GOSZAKUP_TOKEN=${GOSZAKUP_TOKEN:-}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  # Uncomment when ready for PostgreSQL + pgvector
+  # db:
+  #   image: pgvector/pgvector:pg16
+  #   environment:
+  #     POSTGRES_DB: goszakup
+  #     POSTGRES_USER: goszakup
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+
+  # Uncomment when frontend is ready
+  # frontend:
+  #   build: ./frontend
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - api
+
+# volumes:
+#   pgdata:

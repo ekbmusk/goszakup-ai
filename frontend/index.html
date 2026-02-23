@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoszakupAI — Risk Analysis Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .token-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .token-bar label {
+            margin: 0;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .token-input {
+            flex: 1;
+            min-width: 240px;
+        }
+
+        .token-status {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .token-status.error {
+            color: #b91c1c;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 28px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        .status-dot.error {
+            background: #ef4444;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #e5e7eb;
+            background: white;
+            padding: 0 24px;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .tab-btn {
+            padding: 16px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #999;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-btn:hover {
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 24px;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+            font-size: 14px;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .risk-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .risk-badge.low {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .risk-badge.medium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .risk-badge.high {
+            background: #fee2e2;
+            color: #7f1d1d;
+        }
+
+        .lot-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .lot-card:hover {
+            background: #f9fafb;
+            border-color: #667eea;
+            transform: translateX(4px);
+        }
+
+        .lot-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 8px;
+        }
+
+        .lot-card-title {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .lot-card-meta {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .lot-card-meta-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .pagination {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 24px;
+        }
+
+        .pagination button {
+            padding: 8px 12px;
+            min-width: 40px;
+        }
+
+        .pagination button.active {
+            background: #667eea;
+        }
+
+        .analysis-detail {
+            background: #f9fafb;
+            padding: 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+
+        .analysis-section {
+            margin-bottom: 20px;
+        }
+
+        .analysis-section h3 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .feature-item {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+        }
+
+        .feature-item-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 4px;
+        }
+
+        .feature-item-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loader.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #e5e7eb;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #7f1d1d;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+
+        .success {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 32px;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .rule-item {
+            background: #f9fafb;
+            border-left: 4px solid #667eea;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-radius: 4px;
+        }
+
+        .rule-item.danger {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .rule-item.warning {
+            border-left-color: #f59e0b;
+            background: #fffbf0;
+        }
+
+        .rule-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .rule-score {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .rule-explanation {
+            font-size: 13px;
+            color: #555;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+
+        .rule-evidence {
+            font-size: 12px;
+            color: #999;
+            font-style: italic;
+            padding: 8px;
+            background: white;
+            border-radius: 3px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .score-breakdown {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .score-breakdown-value {
+            font-size: 48px;
+            font-weight: 700;
+            margin: 12px 0;
+        }
+
+        .score-breakdown-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .lot-detail-header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .lot-detail-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .lot-detail-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            .tabs {
+                overflow-x: auto;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+            }
+
+            .lot-detail-title {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>GoszakupAI</h1>
+            <div class="status">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Connecting...</span>
+            </div>
+            <div class="token-bar">
+                <label for="goszakupToken">Goszakup token</label>
+                <input class="token-input" type="password" id="goszakupToken" placeholder="Paste your goszakup token" />
+                <button type="button" onclick="saveToken()">Save token</button>
+                <span class="token-status" id="tokenStatus"></span>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('browse')">📋 Browse Lots</button>
+            <button class="tab-btn" onclick="switchTab('analyze')">🔍 Analyze Text</button>
+            <button class="tab-btn" onclick="switchTab('stats')">📊 Dashboard</button>
+        </div>
+
+        <!-- Browse Lots Tab -->
+        <div id="browse" class="tab-content active">
+            <div id="browseLoader" class="loader">
+                <div class="spinner"></div>
+                <p>Loading lots...</p>
+            </div>
+
+            <div id="browseContent" style="display: none;">
+                <div id="lotsList"></div>
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>
+
+        <!-- Analyze Tab -->
+        <div id="analyze" class="tab-content">
+            <h2 style="margin-bottom: 20px;">Analyze Custom Procurement Text</h2>
+
+            <form id="analyzeForm" onsubmit="handleAnalyze(event)" style="margin-bottom: 24px;">
+                <div class="form-group">
+                    <label for="text">Specification Text</label>
+                    <textarea id="text" required placeholder="Enter procurement specification..."></textarea>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="budget">Budget (₸)</label>
+                        <input type="number" id="budget" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="participants">Participants</label>
+                        <input type="number" id="participants" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="deadline">Deadline (days)</label>
+                        <input type="number" id="deadline" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="category">Category Code</label>
+                        <input type="text" id="category" placeholder="e.g. 30213100-6">
+                    </div>
+                </div>
+
+                <button type="submit" id="analyzeBtn">Analyze</button>
+            </form>
+
+            <div id="analyzeResult" style="display: none;">
+                <h3 style="margin-bottom: 16px;">Analysis Result</h3>
+                <div id="resultContent"></div>
+            </div>
+        </div>
+
+        <!-- Stats Tab -->
+        <div id="stats" class="tab-content">
+            <h2 style="margin-bottom: 20px;">Dashboard Statistics</h2>
+
+            <div id="statsLoader" class="loader">
+                <div class="spinner"></div>
+                <p>Loading stats...</p>
+            </div>
+
+            <div id="statsContent" style="display: none;">
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <div class="feature-item-label">Total Lots</div>
+                        <div class="feature-item-value" id="totalLots">-</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-item-label">Low Risk</div>
+                        <div class="feature-item-value" id="lowRisk">-</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-item-label">Medium Risk</div>
+                        <div class="feature-item-value" id="mediumRisk">-</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-item-label">High Risk</div>
+                        <div class="feature-item-value" id="highRisk">-</div>
+                    </div>
+                </div>
+
+                <div class="analysis-detail" style="margin-top: 24px;">
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <h3 style="margin: 0;">Schema Mock</h3>
+                        <button type="button" onclick="loadSchemaMock()">Load schema mock</button>
+                    </div>
+                    <div id="schemaMockStatus" style="font-size: 12px; color: #666;"></div>
+                    <details style="margin-top: 12px;">
+                        <summary style="cursor: pointer; color: #5568d3; font-size: 13px;">Show
+                            goszakup_schema_mock.json</summary>
+                        <pre id="schemaMockContent"
+                            style="background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 6px; font-size: 12px; line-height: 1.5; overflow: auto; margin-top: 10px;"></pre>
+                    </details>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lot Detail Modal -->
+    <div id="lotModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeLotModal()">✕</button>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8006/api';
+        let currentPage = 0;
+        const pageSize = 10;
+
+        function getApiKey() {
+            return localStorage.getItem('apiKey') || '';
+        }
+
+        async function apiFetch(url, options = {}) {
+            const headers = { ...(options.headers || {}) };
+            const apiKey = getApiKey();
+            if (apiKey) headers['X-API-Key'] = apiKey;
+
+            const res = await fetch(url, { ...options, headers });
+
+            if (res.status === 401 && !options._retried) {
+                const key = prompt('Enter API key:');
+                if (key) {
+                    localStorage.setItem('apiKey', key);
+                    return apiFetch(url, { ...options, _retried: true });
+                }
+            }
+
+            return res;
+        }
+
+        function setTokenStatus(message, isError = false) {
+            const el = document.getElementById('tokenStatus');
+            el.textContent = message;
+            el.className = isError ? 'token-status error' : 'token-status';
+        }
+
+        function setSchemaMockStatus(message, isError = false) {
+            const el = document.getElementById('schemaMockStatus');
+            el.textContent = message;
+            el.style.color = isError ? '#b91c1c' : '#666';
+        }
+
+        async function saveToken() {
+            const tokenInput = document.getElementById('goszakupToken');
+            const token = tokenInput.value.trim();
+
+            if (!token) {
+                setTokenStatus('Token is required', true);
+                return;
+            }
+
+            setTokenStatus('Saving token...');
+
+            try {
+                const res = await apiFetch(`${API_BASE}/settings/token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, persist: true })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    const message = data?.detail || data?.error?.message || `HTTP ${res.status}`;
+                    throw new Error(message);
+                }
+
+                setTokenStatus('Token saved. Reloading lots...');
+                tokenInput.value = '';
+                await checkHealth();
+                await loadLots(0);
+            } catch (err) {
+                setTokenStatus(`Failed to save token: ${err.message}`, true);
+            }
+        }
+
+        async function loadSchemaMock() {
+            setSchemaMockStatus('Loading schema mock...');
+            const contentEl = document.getElementById('schemaMockContent');
+            contentEl.textContent = '';
+
+            try {
+                const res = await apiFetch(`${API_BASE}/mock/schema`);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    const message = data?.detail || data?.error?.message || `HTTP ${res.status}`;
+                    throw new Error(message);
+                }
+
+                const payload = escapeHtml(JSON.stringify(data, null, 2));
+                contentEl.textContent = payload;
+                setSchemaMockStatus('Loaded.');
+            } catch (err) {
+                setSchemaMockStatus(`Failed to load: ${err.message}`, true);
+            }
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            checkHealth();
+            loadLots();
+        });
+
+        async function checkHealth() {
+            try {
+                const res = await apiFetch(`${API_BASE}/health`);
+                const data = await res.json();
+                updateStatus(true, `Ready (${data.total_lots} lots)`);
+            } catch (err) {
+                updateStatus(false, 'Backend offline');
+                console.error('Health check failed:', err);
+            }
+        }
+
+        function updateStatus(ok, text) {
+            document.getElementById('statusDot').className = ok ? 'status-dot' : 'status-dot error';
+            document.getElementById('statusText').textContent = text;
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(tab).classList.add('active');
+            event.target.classList.add('active');
+
+            if (tab === 'browse') loadLots();
+            if (tab === 'stats') loadStats();
+        }
+
+        async function loadLots(page = 0) {
+            currentPage = page;
+            const loader = document.getElementById('browseLoader');
+            const content = document.getElementById('browseContent');
+
+            loader.classList.add('active');
+            content.style.display = 'none';
+
+            try {
+                const res = await apiFetch(`${API_BASE}/lots?page=${page}&size=${pageSize}`);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    const message = data?.error?.message || data?.detail || `HTTP ${res.status}`;
+                    throw new Error(message);
+                }
+
+                const items = Array.isArray(data.items) ? data.items : [];
+                renderLots(items, data.total || 0);
+                renderPagination(data.total || 0);
+            } catch (err) {
+                document.getElementById('lotsList').innerHTML = `<div class="error">Failed to load lots: ${err.message}</div>`;
+            } finally {
+                loader.classList.remove('active');
+                content.style.display = 'block';
+            }
+        }
+
+        function renderLots(lots, total) {
+            if (!Array.isArray(lots) || lots.length === 0) {
+                document.getElementById('lotsList').innerHTML = `<div class="error">No lots found.</div>`;
+                return;
+            }
+
+            const html = lots.map(lot => `
+                <div class="lot-card" onclick="viewLotDetail('${lot.lot_id}')">
+                    <div class="lot-card-header">
+                        <div class="lot-card-title">${lot.name_ru || lot.lot_id}</div>
+                        <span class="risk-badge ${lot.risk_level.toLowerCase()}">${lot.risk_level}</span>
+                    </div>
+                    <div class="lot-card-meta">
+                        <div class="lot-card-meta-item">
+                            <span>Risk Score:</span>
+                            <strong>${lot.risk_score}</strong>
+                        </div>
+                        <div class="lot-card-meta-item">
+                            <span>Budget:</span>
+                            <strong>${(lot.budget || 0).toLocaleString()} ₸</strong>
+                        </div>
+                        <div class="lot-card-meta-item">
+                            <span>Category:</span>
+                            <strong>${lot.category_name || '-'}</strong>
+                        </div>
+                        <div class="lot-card-meta-item">
+                            <span>Participants:</span>
+                            <strong>${lot.participants_count}</strong>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('lotsList').innerHTML = html;
+        }
+
+        function renderPagination(total) {
+            const pages = Math.ceil(total / pageSize);
+            const html = Array.from({ length: pages }, (_, i) => `
+                <button 
+                    class="${i === currentPage ? 'active' : ''}"
+                    onclick="loadLots(${i})"
+                >
+                    ${i + 1}
+                </button>
+            `).join('');
+
+            document.getElementById('pagination').innerHTML = html;
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        async function viewLotDetail(lotId) {
+            const modal = document.getElementById('lotModal');
+            const modalBody = document.getElementById('modalBody');
+
+            // Show loading state
+            modalBody.innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <div class="spinner" style="width: 40px; height: 40px; margin: 0 auto;"></div>
+                    <p style="margin-top: 16px; color: #666;">Loading lot details...</p>
+                </div>
+            `;
+            modal.classList.add('active');
+
+            try {
+                const res = await apiFetch(`${API_BASE}/lots/${lotId}/analysis`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+
+                const rulesList = (data.rule_analysis?.rules_triggered || [])
+                    .map(rule => `
+                        <div class="rule-item ${rule.severity || 'warning'}">
+                            <div class="rule-title">
+                                ${rule.rule_name_ru}
+                                <span class="rule-score">+${rule.score}</span>
+                            </div>
+                            <div class="rule-explanation">${rule.explanation_ru}</div>
+                            <div class="rule-evidence">📌 ${rule.evidence}</div>
+                        </div>
+                    `).join('');
+
+                const budgetStr = (data.lot_data.budget || 0).toLocaleString();
+                const rawLot = escapeHtml(JSON.stringify(data.lot_data || {}, null, 2));
+                const html = `
+                    <div class="lot-detail-header">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div>
+                                <div class="lot-detail-title">${data.lot_data.name_ru}</div>
+                                <p style="color: #666; font-size: 13px; margin-top: 4px;">${lotId}</p>
+                            </div>
+                            <span class="risk-badge ${data.final_level.toLowerCase()}" style="font-size: 14px; padding: 8px 16px;">
+                                ${data.final_level}
+                            </span>
+                        </div>
+                        
+                        <div class="lot-detail-meta">
+                            <div class="meta-item">
+                                <div class="meta-label">Budget</div>
+                                <div class="meta-value">${budgetStr} ₸</div>
+                            </div>
+                            <div class="meta-item">
+                                <div class="meta-label">Category</div>
+                                <div class="meta-value">${data.lot_data.category_name || '-'}</div>
+                            </div>
+                            <div class="meta-item">
+                                <div class="meta-label">Participants</div>
+                                <div class="meta-value">${data.lot_data.participants_count}</div>
+                            </div>
+                            <div class="meta-item">
+                                <div class="meta-label">Deadline</div>
+                                <div class="meta-value">${data.lot_data.deadline_days} days</div>
+                            </div>
+                            <div class="meta-item">
+                                <div class="meta-label">Status</div>
+                                <div class="meta-value">${data.lot_data.status}</div>
+                            </div>
+                            <div class="meta-item">
+                                <div class="meta-label">City</div>
+                                <div class="meta-value">${data.lot_data.city || '-'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="score-breakdown">
+                        <div class="score-breakdown-label">Risk Score</div>
+                        <div class="score-breakdown-value">${data.final_score}</div>
+                        <div class="score-breakdown-label">${data.final_level}</div>
+                    </div>
+                    
+                    ${data.rule_analysis && data.rule_analysis.rules_triggered.length > 0 ? `
+                        <div class="analysis-section">
+                            <h3>🚨 Triggered Rules (${data.rule_analysis.rules_triggered.length})</h3>
+                            <p style="color: #666; font-size: 13px; margin-bottom: 12px;">
+                                These rules triggered the high risk assessment:
+                            </p>
+                            ${rulesList}
+                        </div>
+                    ` : `
+                        <div class="analysis-section">
+                            <h3>✓ No Red Flags</h3>
+                            <p style="color: #666;">This lot passed all risk detection rules.</p>
+                        </div>
+                    `}
+                    
+                    ${data.ml_prediction ? `
+                        <div class="analysis-section">
+                            <h3>🤖 Machine Learning Analysis</h3>
+                            <div class="feature-grid">
+                                <div class="feature-item">
+                                    <div class="feature-item-label">CatBoost Probability</div>
+                                    <div class="feature-item-value">${(data.ml_prediction.catboost_proba * 100).toFixed(1)}%</div>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-item-label">Anomaly Detection</div>
+                                    <div class="feature-item-value">${data.ml_prediction.isolation_anomaly ? '⚠️ Anomaly' : '✓ Normal'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${data.network_flags && data.network_flags.length > 0 ? `
+                        <div class="analysis-section">
+                            <h3>🕸️ Network Flags</h3>
+                            <ul style="list-style: none; padding: 0;">
+                                ${data.network_flags.map(f => `<li style="padding: 8px 0; color: #555; border-bottom: 1px solid #eee;">• ${f}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    
+                    ${data.lot_data.desc_ru ? `
+                        <div class="analysis-section">
+                            <h3>📝 Full Description</h3>
+                            <div style="background: #f9fafb; padding: 12px; border-radius: 6px; font-size: 13px; line-height: 1.6; color: #555; white-space: pre-wrap;">
+                                ${data.lot_data.desc_ru}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div class="analysis-section">
+                        <h3>📦 Raw Lot Data</h3>
+                        <details>
+                            <summary style="cursor: pointer; color: #5568d3; font-size: 13px;">Show full record</summary>
+                            <pre style="background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 6px; font-size: 12px; line-height: 1.5; overflow: auto; margin-top: 10px;">${rawLot}</pre>
+                        </details>
+                    </div>
+                `;
+
+                modalBody.innerHTML = html;
+            } catch (err) {
+                modalBody.innerHTML = `<div class="error">Failed to load lot details: ${err.message}</div>`;
+            }
+        }
+
+        function closeLotModal() {
+            document.getElementById('lotModal').classList.remove('active');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('lotModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'lotModal') closeLotModal();
+        });
+
+        async function handleAnalyze(e) {
+            e.preventDefault();
+
+            const btn = document.getElementById('analyzeBtn');
+            btn.disabled = true;
+
+            try {
+                const res = await apiFetch(`${API_BASE}/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: document.getElementById('text').value,
+                        budget: parseFloat(document.getElementById('budget').value),
+                        participants_count: parseInt(document.getElementById('participants').value),
+                        deadline_days: parseInt(document.getElementById('deadline').value),
+                        category_code: document.getElementById('category').value,
+                    })
+                });
+
+                const data = await res.json();
+
+                const html = `
+                    <div class="success">✓ Analysis complete</div>
+                    
+                    <div class="analysis-detail">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h3>Result</h3>
+                            <span class="risk-badge ${data.final_level.toLowerCase()}">${data.final_level}</span>
+                        </div>
+                        
+                        <div class="feature-grid">
+                            <div class="feature-item">
+                                <div class="feature-item-label">Risk Score</div>
+                                <div class="feature-item-value">${data.final_score}</div>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-item-label">Rules Triggered</div>
+                                <div class="feature-item-value">${data.rule_analysis?.rules_triggered.length || 0}</div>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-item-label">ML Anomaly</div>
+                                <div class="feature-item-value">${data.ml_prediction?.isolation_anomaly ? '⚠️' : '✓'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${data.explanation && data.explanation.length > 0 ? `
+                        <div class="analysis-section">
+                            <h3>Explanation</h3>
+                            <ul>${data.explanation.map(e => `<li>${e}</li>`).join('')}</ul>
+                        </div>
+                    ` : ''}
+                `;
+
+                document.getElementById('resultContent').innerHTML = html;
+                document.getElementById('analyzeResult').style.display = 'block';
+            } catch (err) {
+                document.getElementById('resultContent').innerHTML = `<div class="error">Error: ${err.message}</div>`;
+                document.getElementById('analyzeResult').style.display = 'block';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function loadStats() {
+            const loader = document.getElementById('statsLoader');
+            const content = document.getElementById('statsContent');
+
+            loader.classList.add('active');
+
+            try {
+                const res = await apiFetch(`${API_BASE}/lots?page=0&size=1000`);
+                const data = await res.json();
+
+                const stats = {
+                    low: data.items.filter(l => l.risk_level === 'LOW').length,
+                    medium: data.items.filter(l => l.risk_level === 'MEDIUM').length,
+                    high: data.items.filter(l => l.risk_level === 'HIGH').length,
+                };
+
+                document.getElementById('totalLots').textContent = data.total;
+                document.getElementById('lowRisk').textContent = stats.low;
+                document.getElementById('mediumRisk').textContent = stats.medium;
+                document.getElementById('highRisk').textContent = stats.high;
+            } catch (err) {
+                console.error('Failed to load stats:', err);
+            } finally {
+                loader.classList.remove('active');
+                content.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+
+</html>
