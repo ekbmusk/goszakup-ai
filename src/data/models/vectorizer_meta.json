@@ -1,5 +1,0 @@
-{
-  "use_transformers": false,
-  "embedding_model": "sentence-transformers/LaBSE",
-  "tfidf_available": true
-}

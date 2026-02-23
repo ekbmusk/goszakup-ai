@@ -37,6 +37,18 @@ data/models/*
 *.tmp
 catboost_info/
 output.txt
+*.pyc
+*.pyo
+
+# Test & Cache
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Demo files
+demo_*.py
+check_*.sh
 
 # Sensitive
 labels.csv
