@@ -1,0 +1,44 @@
+# Render Blueprint for goszakup-ai
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: goszakup-ai-api
+    runtime: python
+    env: python
+    
+    # Автодеплой из GitHub
+    repo: https://github.com/ekbmusk/goszakup-ai
+    branch: main
+    
+    # Build & Start
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.api.routes:app --host 0.0.0.0 --port $PORT --workers 1
+    
+    # Бесплатный план
+    plan: free
+    
+    # Region (выберите ближайший к Казахстану)
+    region: frankfurt
+    
+    # Health check
+    healthCheckPath: /api/health
+    
+    # Environment variables
+    envVars:
+      - key: GOSZAKUP_TOKEN
+        sync: false  # Добавите вручную через UI
+      - key: FORCE_TRAIN
+        value: false
+      - key: EXPORT_TRAIN_DATA
+        value: false
+      - key: API_KEY
+        generateValue: true  # Render создаст случайный ключ
+      - key: PYTHON_VERSION
+        value: 3.11.0
+
+# Free tier limitations:
+# - Засыпает после 15 минут неактивности
+# - 750 часов в месяц
+# - 0.1 CPU, 512MB RAM
+# - Автопробуждение при первом запросе (~30 сек)
