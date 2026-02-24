@@ -678,6 +678,35 @@ export class GoszakupApiClient {
         window.URL.revokeObjectURL(url);
     }
 
+    /**
+     * Export lot analysis to PDF
+     */
+    async exportLotPDF(lotId: string): Promise<Blob> {
+        const url = `/api/lots/${encodeURIComponent(lotId)}/export/pdf`;
+
+        const response = await fetch(this.baseUrl + url);
+        if (!response.ok) {
+            throw new Error(`PDF export failed: ${response.statusText}`);
+        }
+
+        return response.blob();
+    }
+
+    /**
+     * Download lot analysis as PDF
+     */
+    async downloadLotPDF(lotId: string, filename?: string): Promise<void> {
+        const blob = await this.exportLotPDF(lotId);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename || `lot_analysis_${lotId}_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }
+
     // Network Analysis
     // ============================================================================
 

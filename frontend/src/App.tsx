@@ -9,6 +9,8 @@ import Customers from '@/pages/Customers';
 import CustomerDetail from '@/pages/CustomerDetail';
 import Categories from '@/pages/Categories';
 import CategoryDetail from '@/pages/CategoryDetail';
+import Timeline from '@/pages/Timeline';
+import NetworkGraph from '@/pages/NetworkGraph';
 
 export default function App() {
   return (
@@ -23,6 +25,8 @@ export default function App() {
           <Route path="/categories" element={<Categories />} />
           <Route path="/categories/:categoryCode" element={<CategoryDetail />} />
           <Route path="/price-analysis" element={<PriceAnalysis />} />
+          <Route path="/timeline" element={<Timeline />} />
+          <Route path="/network" element={<NetworkGraph />} />
           <Route path="/analyze" element={<ManualAnalysis />} />
         </Route>
       </Routes>

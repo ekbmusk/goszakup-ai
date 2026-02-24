@@ -14,6 +14,13 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 from src.model.analyzer import GoszakupAnalyzer
 from src.utils.config import CORS_ALLOWED_ORIGINS, LABELS_CSV
@@ -208,6 +215,126 @@ async def analyze_lot(lot_id: str):
     return result.to_dict()
 
 
+@app.get("/api/lots/{lot_id}/export/pdf")
+async def export_lot_pdf(lot_id: str):
+    """Экспорт анализа лота в PDF формате."""
+    if not analyzer:
+        raise HTTPException(503, "Analyzer not ready")
+
+    result = analyzer.analyze_lot(lot_id)
+    if not result.lot_data:
+        raise HTTPException(404, f"Lot {lot_id} not found")
+
+    # Create PDF in memory
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, 
+                           topMargin=2*cm, bottomMargin=2*cm)
+    
+    # Styles
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        spaceAfter=12,
+    )
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=12,
+        spaceAfter=8,
+        textColor=colors.HexColor('#1a365d'),
+    )
+    
+    story = []
+    lot = result.lot_data
+    
+    # Title
+    story.append(Paragraph(f"<b>Анализ рисков закупки</b>", title_style))
+    story.append(Paragraph(f"Лот: {lot.get('name_ru', 'N/A')}", styles['Normal']))
+    story.append(Paragraph(f"ID: {result.lot_id}", styles['Normal']))
+    story.append(Spacer(1, 0.5*cm))
+    
+    # Risk Score
+    risk_level_ru = {
+        'LOW': 'Низкий',
+        'MEDIUM': 'Средний', 
+        'HIGH': 'Высокий',
+        'CRITICAL': 'Критический'
+    }.get(result.final_level, result.final_level)
+    
+    story.append(Paragraph(f"<b>Уровень риска: {risk_level_ru}</b>", heading_style))
+    story.append(Paragraph(f"Оценка: {result.final_score:.1f} / 100", styles['Normal']))
+    story.append(Spacer(1, 0.3*cm))
+    
+    # Lot Details
+    story.append(Paragraph("<b>Информация о лоте</b>", heading_style))
+    lot_details = [
+        ['Категория:', lot.get('category_name', 'N/A')],
+        ['Город:', lot.get('city', 'N/A')],
+        ['Бюджет:', f"{lot.get('budget', 0):,.0f} ₸".replace(',', ' ')],
+        ['Участников:', str(lot.get('participants_count', 0))],
+        ['Срок подачи:', f"{lot.get('deadline_days', 0)} дней"],
+    ]
+    
+    if lot.get('customer_name'):
+        lot_details.append(['Заказчик:', lot['customer_name']])
+    
+    lot_table = Table(lot_details, colWidths=[4*cm, 12*cm])
+    lot_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(lot_table)
+    story.append(Spacer(1, 0.5*cm))
+    
+    # Risk Rules
+    if result.rule_analysis and result.rule_analysis.rules_triggered:
+        story.append(Paragraph(f"<b>Обнаружено нарушений: {len(result.rule_analysis.rules_triggered)}</b>", heading_style))
+        
+        for rule in result.rule_analysis.rules_triggered[:10]:  # Top 10 rules
+            rule_text = f"<b>{rule.get('rule_name_ru', 'N/A')}</b><br/>"
+            rule_text += f"<i>{rule.get('explanation_ru', '')}</i><br/>"
+            rule_text += f"Вес: {rule.get('weight', 0):.1f}, "
+            rule_text += f"Балл: {rule.get('raw_score', 0):.1f}"
+            
+            story.append(Paragraph(rule_text, styles['Normal']))
+            story.append(Spacer(1, 0.2*cm))
+    
+    story.append(Spacer(1, 0.5*cm))
+    
+    # Summary
+    if result.rule_analysis and result.rule_analysis.summary_ru:
+        story.append(Paragraph("<b>Резюме</b>", heading_style))
+        story.append(Paragraph(result.rule_analysis.summary_ru, styles['Normal']))
+    
+    # Footer
+    story.append(Spacer(1, 1*cm))
+    story.append(Paragraph(
+        f"<i>Отчет сгенерирован: {datetime.now().strftime('%d.%m.%Y %H:%M')}</i>",
+        styles['Normal']
+    ))
+    story.append(Paragraph(
+        "<i>GoszakupAI - Система анализа рисков государственных закупок РК</i>",
+        styles['Normal']
+    ))
+    
+    # Build PDF
+    doc.build(story)
+    buffer.seek(0)
+    
+    filename = f"lot_analysis_{result.lot_id}_{datetime.now().strftime('%Y%m%d')}.pdf"
+    
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}",
+        }
+    )
+
+
 @app.post("/api/analyze")
 async def analyze_text(request: AnalyzeTextRequest):
     if not analyzer:
@@ -381,12 +508,201 @@ async def export_csv(
     )
 
 
+@app.get("/api/network/graph")
+async def network_graph(
+    min_connections: int = Query(1, ge=1),
+    max_nodes: int = Query(100, ge=10, le=500),
+):
+    """Получить данные графа связей заказчик-поставщик."""
+    if not analyzer:
+        raise HTTPException(503, "Analyzer not ready")
+    
+    results = analyzer.get_cached_results()
+    
+    # Build connections map
+    from collections import defaultdict
+    connections = defaultdict(lambda: defaultdict(lambda: {"count": 0, "total_budget": 0, "lots": []}))
+    node_info = {}
+    
+    for r in results:
+        customer_bin = r.lot_data.get("customer_bin", "")
+        winner_bin = r.lot_data.get("winner_bin", "")
+        
+        if not customer_bin or not winner_bin or customer_bin == winner_bin:
+            continue
+        
+        # Add edge
+        connections[customer_bin][winner_bin]["count"] += 1
+        connections[customer_bin][winner_bin]["total_budget"] += r.lot_data.get("budget", 0)
+        connections[customer_bin][winner_bin]["lots"].append(r.lot_id)
+        
+        # Track node info
+        if customer_bin not in node_info:
+            node_info[customer_bin] = {
+                "bin": customer_bin,
+                "name": r.lot_data.get("customer_name", ""),
+                "type": "customer",
+                "total_lots": 0,
+                "total_budget": 0,
+                "high_risk_lots": 0
+            }
+        
+        node_info[customer_bin]["total_lots"] += 1
+        node_info[customer_bin]["total_budget"] += r.lot_data.get("budget", 0)
+        if r.final_level in ("HIGH", "CRITICAL"):
+            node_info[customer_bin]["high_risk_lots"] += 1
+        
+        if winner_bin not in node_info:
+            node_info[winner_bin] = {
+                "bin": winner_bin,
+                "name": r.lot_data.get("winner_name", ""),
+                "type": "supplier",
+                "total_lots": 0,
+                "total_budget": 0,
+                "high_risk_lots": 0
+            }
+    
+    # Filter and format for visualization
+    nodes = []
+    edges = []
+    included_bins = set()
+    
+    # Sort by connection count
+    sorted_customers = sorted(
+        connections.items(),
+        key=lambda x: sum(conn["count"] for conn in x[1].values()),
+        reverse=True
+    )
+    
+    for customer_bin, suppliers in sorted_customers[:max_nodes]:
+        if len(suppliers) < min_connections:
+            continue
+        
+        included_bins.add(customer_bin)
+        nodes.append(node_info[customer_bin])
+        
+        for supplier_bin, edge_data in suppliers.items():
+            if edge_data["count"] < min_connections:
+                continue
+            
+            included_bins.add(supplier_bin)
+            nodes.append(node_info[supplier_bin])
+            
+            edges.append({
+                "source": customer_bin,
+                "target": supplier_bin,
+                "weight": edge_data["count"],
+                "total_budget": edge_data["total_budget"],
+                "lot_count": edge_data["count"],
+                "lot_ids": edge_data["lots"][:10]  # Limit to 10 for performance
+            })
+        
+        if len(included_bins) >= max_nodes:
+            break
+    
+    # Remove duplicates from nodes
+    unique_nodes = {node["bin"]: node for node in nodes}
+    
+    result = {
+        "nodes": list(unique_nodes.values()) if unique_nodes else [],
+        "edges": edges if edges else [],
+        "stats": {
+            "total_nodes": len(unique_nodes),
+            "total_edges": len(edges),
+            "customer_count": sum(1 for n in unique_nodes.values() if n["type"] == "customer"),
+            "supplier_count": sum(1 for n in unique_nodes.values() if n["type"] == "supplier"),
+        }
+    }
+    
+    return result
+
+
 @app.get("/api/network/{bin_id}")
 async def network_analysis(bin_id: str):
     if not analyzer:
         raise HTTPException(503, "Analyzer not ready")
     result = analyzer.network.analyze_bin(bin_id)
     return result.to_dict()
+
+
+@app.get("/api/stats/timeline")
+async def timeline_stats(
+    period: str = Query("month", regex="^(day|week|month|quarter)$"),
+    limit: int = Query(12, ge=1, le=100),
+):
+    """Временная динамика рисков по периодам."""
+    if not analyzer:
+        raise HTTPException(503, "Analyzer not ready")
+    
+    analyzer.analyze_incremental(max_new=50)
+    results = analyzer.get_cached_results()
+    
+    from collections import defaultdict
+    from datetime import datetime, timedelta
+    import calendar
+    
+    # Group by time period
+    timeline_data = defaultdict(lambda: {
+        "count": 0,
+        "avg_risk": 0,
+        "risk_dist": {"LOW": 0, "MEDIUM": 0, "HIGH": 0, "CRITICAL": 0},
+        "total_budget": 0,
+        "high_risk_count": 0,
+        "scores": []
+    })
+    
+    for r in results:
+        # Try to get publish date from lot_data
+        pub_date = r.lot_data.get("publish_date")
+        if not pub_date:
+            continue
+        
+        try:
+            date_obj = datetime.fromisoformat(pub_date.replace('Z', '+00:00'))
+        except:
+            continue
+        
+        # Determine period key
+        if period == "day":
+            key = date_obj.strftime("%Y-%m-%d")
+        elif period == "week":
+            # ISO week
+            key = f"{date_obj.year}-W{date_obj.isocalendar()[1]:02d}"
+        elif period == "month":
+            key = date_obj.strftime("%Y-%m")
+        else:  # quarter
+            quarter = (date_obj.month - 1) // 3 + 1
+            key = f"{date_obj.year}-Q{quarter}"
+        
+        timeline_data[key]["count"] += 1
+        timeline_data[key]["scores"].append(r.final_score)
+        timeline_data[key]["risk_dist"][r.final_level] += 1
+        timeline_data[key]["total_budget"] += r.lot_data.get("budget", 0)
+        if r.final_level in ("HIGH", "CRITICAL"):
+            timeline_data[key]["high_risk_count"] += 1
+    
+    # Calculate averages and format
+    timeline = []
+    for period_key in sorted(timeline_data.keys())[-limit:]:
+        data = timeline_data[period_key]
+        if data["scores"]:
+            data["avg_risk"] = round(sum(data["scores"]) / len(data["scores"]), 1)
+            del data["scores"]
+        
+        data["high_risk_pct"] = round(
+            (data["high_risk_count"] / data["count"] * 100) if data["count"] > 0 else 0, 1
+        )
+        
+        timeline.append({
+            "period": period_key,
+            **data
+        })
+    
+    return {
+        "period_type": period,
+        "timeline": timeline,
+        "total_periods": len(timeline)
+    }
 
 
 @app.get("/api/stats/category-pricing")

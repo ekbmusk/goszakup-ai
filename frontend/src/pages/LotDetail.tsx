@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLotAnalysis, useCategoryPricingDetail } from '@/hooks/useApi';
-import { formatBudget, type RiskLevel } from '@/types/api';
+import { formatBudget, GoszakupApiClient, type RiskLevel } from '@/types/api';
+import { useState, useMemo } from 'react';
 import {
     ArrowLeft,
     Loader2,
@@ -27,6 +28,7 @@ import {
     Calendar,
     ExternalLink,
     CircleDot,
+    Download,
 } from 'lucide-react';
 
 const riskConfig: Record<string, { label: string; class: string; color: string }> = {
@@ -68,10 +70,27 @@ export default function LotDetail() {
     const { lotId } = useParams<{ lotId: string }>();
     const navigate = useNavigate();
     const { data: analysis, loading, error } = useLotAnalysis(lotId || null);
+    const [exportingPDF, setExportingPDF] = useState(false);
+
+    const apiClient = useMemo(() => new GoszakupApiClient(), []);
 
     // Load category pricing stats
     const categoryCode = analysis?.lot_data?.category_code;
     const { data: categoryPricing } = useCategoryPricingDetail(categoryCode || null);
+
+    const handleExportPDF = async () => {
+        if (!lotId) return;
+
+        setExportingPDF(true);
+        try {
+            await apiClient.downloadLotPDF(lotId);
+        } catch (err) {
+            console.error('PDF export failed:', err);
+            alert('Ошибка экспорта в PDF. Попробуйте позже.');
+        } finally {
+            setExportingPDF(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -108,9 +127,28 @@ export default function LotDetail() {
         <div className="space-y-6">
             {/* Back + Header */}
             <div>
-                <button onClick={() => navigate(-1)} className="btn-secondary text-xs mb-4">
-                    <ArrowLeft className="w-3.5 h-3.5" /> Назад к лотам
-                </button>
+                <div className="flex items-center justify-between mb-4">
+                    <button onClick={() => navigate(-1)} className="btn-secondary text-xs">
+                        <ArrowLeft className="w-3.5 h-3.5" /> Назад к лотам
+                    </button>
+                    <button
+                        onClick={handleExportPDF}
+                        disabled={exportingPDF}
+                        className="btn-secondary text-xs flex items-center gap-2"
+                    >
+                        {exportingPDF ? (
+                            <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                Экспорт...
+                            </>
+                        ) : (
+                            <>
+                                <Download className="w-3.5 h-3.5" />
+                                Экспорт в PDF
+                            </>
+                        )}
+                    </button>
+                </div>
 
                 <div className="flex flex-col lg:flex-row lg:items-start gap-4">
                     {/* Lot Info */}

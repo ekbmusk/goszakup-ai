@@ -8,6 +8,8 @@ import {
     TrendingUp,
     Building2,
     FolderOpen,
+    LineChart,
+    Network,
 } from 'lucide-react';
 import { useHealth } from '@/hooks/useApi';
 
@@ -17,6 +19,8 @@ const navItems = [
     { to: '/customers', icon: Building2, label: 'Заказчики' },
     { to: '/categories', icon: FolderOpen, label: 'Категории' },
     { to: '/price-analysis', icon: TrendingUp, label: 'Анализ по ценам' },
+    { to: '/timeline', icon: LineChart, label: 'Временная динамика' },
+    { to: '/network', icon: Network, label: 'Граф связей' },
     { to: '/analyze', icon: FileSearch, label: 'Анализ текста' },
 ];
 
