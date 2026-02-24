@@ -12,42 +12,46 @@
 /**
  * Risk level classification for procurement lots
  */
-export enum RiskLevel {
-    LOW = 'LOW',           // score: 0-25
-    MEDIUM = 'MEDIUM',     // score: 25-50
-    HIGH = 'HIGH',         // score: 50-75
-    CRITICAL = 'CRITICAL'  // score: 75-100
-}
+export const RiskLevel = {
+    LOW: 'LOW',           // score: 0-25
+    MEDIUM: 'MEDIUM',     // score: 25-50
+    HIGH: 'HIGH',         // score: 50-75
+    CRITICAL: 'CRITICAL'  // score: 75-100
+} as const;
+export type RiskLevel = (typeof RiskLevel)[keyof typeof RiskLevel];
 
 /**
  * Severity level for individual risk rules
  */
-export enum RuleSeverity {
-    LOW = 'low',
-    MEDIUM = 'medium',
-    HIGH = 'high',
-    CRITICAL = 'critical'
-}
+export const RuleSeverity = {
+    LOW: 'low',
+    MEDIUM: 'medium',
+    HIGH: 'high',
+    CRITICAL: 'critical'
+} as const;
+export type RuleSeverity = (typeof RuleSeverity)[keyof typeof RuleSeverity];
 
 /**
  * Sort options for procurement lots
  */
-export enum SortBy {
-    RISK_SCORE = 'risk_score',
-    BUDGET = 'budget',
-    DEADLINE_DAYS = 'deadline_days'
-}
+export const SortBy = {
+    RISK_SCORE: 'risk_score',
+    BUDGET: 'budget',
+    DEADLINE_DAYS: 'deadline_days'
+} as const;
+export type SortBy = (typeof SortBy)[keyof typeof SortBy];
 
 /**
  * Categories for risk rules
  */
-export enum RuleCategory {
-    SPECIFICATION = 'specification',
-    SUPPLIER_RESTRICTION = 'supplier_restriction',
-    TIMELINE = 'timeline',
-    PRICE = 'price',
-    PROCESS = 'process'
-}
+export const RuleCategory = {
+    SPECIFICATION: 'specification',
+    SUPPLIER_RESTRICTION: 'supplier_restriction',
+    TIMELINE: 'timeline',
+    PRICE: 'price',
+    PROCESS: 'process'
+} as const;
+export type RuleCategory = (typeof RuleCategory)[keyof typeof RuleCategory];
 
 // ============================================================================
 // HEALTH CHECK
@@ -526,12 +530,14 @@ export class GoszakupApiClient {
 // ============================================================================
 
 export class ApiError extends Error {
+    statusCode: number;
     constructor(
         message: string,
-        public statusCode: number
+        statusCode: number
     ) {
         super(message);
         this.name = 'ApiError';
+        this.statusCode = statusCode;
     }
 }
 
