@@ -75,11 +75,37 @@ export interface LotData {
     participants_count: number;
     deadline_days: number;
     city: string;
+    // Extended fields
+    desc_ru?: string;
+    extra_desc_ru?: string;
+    customer_bin?: string;
+    customer_name?: string;
+    publish_date?: string;
+    deadline_date?: string;
+    // Procurement details
+    unit?: string;
+    quantity?: number;
+    unit_price?: number;
+    advance_payment_pct?: number;
+    financing_source?: string;
+    incoterms?: string;
+    dumping_status?: string;
+    // Contact information
+    contact_person?: string;
+    contact_position?: string;
+    contact_phone?: string;
+    contact_email?: string;
+    // Metadata
+    url?: string;
+    lot_status?: string;
+    // Synthetic data marking
+    is_synthetic?: boolean;
 }
 
 export interface LotSummary {
     lot_id: string;
     name_ru: string;
+    category_code: string;
     category_name: string;
     budget: number;
     participants_count: number;
@@ -88,6 +114,9 @@ export interface LotSummary {
     risk_score: number;
     risk_level: RiskLevel;
     rules_count: number;
+    category_median?: number;
+    price_deviation_pct?: number;
+    is_synthetic?: boolean;
 }
 
 // ============================================================================
@@ -134,20 +163,32 @@ export interface RuleAnalysis {
  */
 export interface LotFeatures {
     lot_id: string;
+    // Brand indicators
     has_brand: boolean;
     brand_count: number;
     brand_names: string[];
+    // Exclusivity markers
     has_exclusive_phrase: boolean;
+    exclusive_count: number;
     has_no_analogs: boolean;
+    // Requirements
     dealer_requirement: boolean;
     geo_restriction: boolean;
+    // Text analysis
     standard_count: number;
     text_length: number;
+    precise_param_count: number;
+    // Market metrics
     participants_count: number;
     deadline_days: number;
     budget: number;
+    budget_ratio: number;
+    // ML features
     is_copypaste: boolean;
     is_unique: boolean;
+    // Temporal metrics
+    winner_repeat_count: number;
+    // Classification
     category_code: string;
 }
 
@@ -250,6 +291,11 @@ export interface CategoryStats {
     count: number;
     high_risk: number;
     avg_score: number;
+    category_code?: string;
+    median_budget?: number;
+    avg_budget?: number;
+    min_budget?: number;
+    max_budget?: number;
 }
 
 export interface DashboardStats {
@@ -265,6 +311,78 @@ export interface DashboardStats {
         [key: string]: CategoryStats;
     };
     top_risks: FullAnalysis[];
+    // Synthetic vs real data statistics
+    data_type_stats?: {
+        total_synthetic: number;
+        total_real: number;
+        synthetic_risk_dist: {
+            [key in RiskLevel]: number;
+        };
+        real_risk_dist: {
+            [key in RiskLevel]: number;
+        };
+    };
+}
+
+/**
+ * Export filters for CSV export
+ */
+export interface ExportFilters {
+    risk_level?: RiskLevel;
+    exclude_synthetic?: boolean;
+    category_code?: string;
+    min_budget?: number;
+    max_budget?: number;
+}
+
+/**
+ * Price statistics for a category
+ */
+export interface CategoryPricingStats {
+    category_code: string;
+    category_name: string;
+    count: number;
+    median: number;
+    min: number;
+    max: number;
+    avg: number;
+    std_dev: number;
+    high_risk_count: number;
+    high_risk_pct: number;
+}
+
+/**
+ * Detailed pricing info for a category with sample lots
+ */
+export interface CategoryPricingDetail {
+    category_code: string;
+    category_name: string;
+    stats: {
+        count: number;
+        median: number;
+        min: number;
+        max: number;
+        avg: number;
+        std_dev: number;
+        percentile_25: number;
+        percentile_75: number;
+    };
+    sample_lots: Array<{
+        lot_id: string;
+        name_ru: string;
+        budget: number;
+        deviation_pct: number;
+        risk_score: number;
+        risk_level: RiskLevel;
+    }>;
+}
+
+/**
+ * Response from /api/stats/category-pricing
+ */
+export interface CategoryPricingResponse {
+    categories: CategoryPricingStats[];
+    total: number;
 }
 
 // ============================================================================
@@ -510,6 +628,54 @@ export class GoszakupApiClient {
      */
     async getDashboardStats(): Promise<DashboardStats> {
         return this.fetch<DashboardStats>('/api/stats/dashboard');
+    }
+
+    /**
+     * Export lots to CSV with optional filters
+     */
+    async exportLotsCSV(filters?: ExportFilters): Promise<Blob> {
+        const params = new URLSearchParams();
+
+        if (filters?.risk_level) {
+            params.append('risk_level', filters.risk_level);
+        }
+        if (filters?.exclude_synthetic !== undefined) {
+            params.append('exclude_synthetic', filters.exclude_synthetic.toString());
+        }
+        if (filters?.category_code) {
+            params.append('category_code', filters.category_code);
+        }
+        if (filters?.min_budget !== undefined) {
+            params.append('min_budget', filters.min_budget.toString());
+        }
+        if (filters?.max_budget !== undefined) {
+            params.append('max_budget', filters.max_budget.toString());
+        }
+
+        const queryString = params.toString();
+        const url = `/api/export/csv${queryString ? '?' + queryString : ''}`;
+
+        const response = await fetch(this.baseUrl + url);
+        if (!response.ok) {
+            throw new Error(`Export failed: ${response.statusText}`);
+        }
+
+        return response.blob();
+    }
+
+    /**
+     * Download CSV export file
+     */
+    async downloadCSV(filters?: ExportFilters, filename?: string): Promise<void> {
+        const blob = await this.exportLotsCSV(filters);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename || `goszakup_export_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
     }
 
     // Network Analysis

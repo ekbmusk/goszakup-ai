@@ -182,6 +182,113 @@ export default function Dashboard() {
                 </div>
             </div>
 
+            {/* Synthetic vs Real Data Comparison */}
+            {stats.data_type_stats && (
+                <div className="glass-card p-5">
+                    <h2 className="text-sm font-semibold mb-4">🤖 Тестовые vs Реальные данные</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Data Type Breakdown */}
+                        <div>
+                            <h3 className="text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase mb-3">
+                                Распределение данных
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 border border-blue-200">
+                                    <div>
+                                        <p className="text-sm font-semibold text-blue-900">Реальные закупки</p>
+                                        <p className="text-xs text-blue-700 mt-0.5">Проверенные данные</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-2xl font-bold text-blue-900">
+                                            {stats.data_type_stats.total_real.toLocaleString()}
+                                        </p>
+                                        <p className="text-xs text-blue-700">
+                                            {((stats.data_type_stats.total_real / stats.total_lots) * 100).toFixed(1)}%
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between p-3 rounded-lg bg-purple-50 border border-purple-200">
+                                    <div>
+                                        <p className="text-sm font-semibold text-purple-900">Тестовые данные</p>
+                                        <p className="text-xs text-purple-700 mt-0.5">Синтетические лоты</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-2xl font-bold text-purple-900">
+                                            {stats.data_type_stats.total_synthetic.toLocaleString()}
+                                        </p>
+                                        <p className="text-xs text-purple-700">
+                                            {((stats.data_type_stats.total_synthetic / stats.total_lots) * 100).toFixed(1)}%
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Risk Comparison */}
+                        <div>
+                            <h3 className="text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase mb-3">
+                                Сравнение рисков
+                            </h3>
+                            <div className="space-y-2">
+                                {(Object.keys(riskLevelConfig) as RiskLevel[]).map((level) => {
+                                    if (!stats.data_type_stats) return null;
+
+                                    const realCount = stats.data_type_stats.real_risk_dist[level] || 0;
+                                    const synthCount = stats.data_type_stats.synthetic_risk_dist[level] || 0;
+                                    const realPct = stats.data_type_stats.total_real > 0
+                                        ? (realCount / stats.data_type_stats.total_real * 100).toFixed(1)
+                                        : '0.0';
+                                    const synthPct = stats.data_type_stats.total_synthetic > 0
+                                        ? (synthCount / stats.data_type_stats.total_synthetic * 100).toFixed(1)
+                                        : '0.0';
+                                    const cfg = riskLevelConfig[level];
+
+                                    return (
+                                        <div key={level} className="space-y-1">
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className={`risk-badge ${cfg.class} text-[10px]`}>{cfg.label}</span>
+                                                <div className="flex gap-4">
+                                                    <span className="text-blue-700 font-medium">
+                                                        {realCount} ({realPct}%)
+                                                    </span>
+                                                    <span className="text-purple-700 font-medium">
+                                                        {synthCount} ({synthPct}%)
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <div className="flex-1 h-1.5 rounded-full bg-blue-100 overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full bg-blue-500 transition-all duration-500"
+                                                        style={{ width: `${realPct}%` }}
+                                                    />
+                                                </div>
+                                                <div className="flex-1 h-1.5 rounded-full bg-purple-100 overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full bg-purple-500 transition-all duration-500"
+                                                        style={{ width: `${synthPct}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="flex gap-4 mt-4 text-xs">
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-3 h-3 rounded bg-blue-500"></div>
+                                    <span className="text-[hsl(var(--muted-foreground))]">Реальные</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-3 h-3 rounded bg-purple-500"></div>
+                                    <span className="text-[hsl(var(--muted-foreground))]">Тестовые</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Top Risks */}
             <div className="glass-card p-5">
                 <div className="flex items-center justify-between mb-4">
@@ -234,7 +341,7 @@ export default function Dashboard() {
                                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                                             {lot.rule_analysis.highlights.slice(0, 2).map((h, j) => (
                                                 <span key={j} className="text-[10px] px-2 py-0.5 rounded-full bg-[hsla(var(--risk-high),0.1)] text-[hsl(var(--risk-high))]">
-                                                    {h.replace(/^⚠️\s*/, '')}
+                                                    {typeof h === 'string' ? h.replace(/^⚠️\s*/, '') : String(h)}
                                                 </span>
                                             ))}
                                         </div>

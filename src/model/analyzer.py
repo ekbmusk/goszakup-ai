@@ -61,15 +61,7 @@ class FullAnalysis:
         
         return {
             "lot_id": self.lot_id,
-            "lot_data": {
-                "name_ru": self.lot_data.get("name_ru", ""),
-                "category_code": self.lot_data.get("category_code", ""),
-                "category_name": self.lot_data.get("category_name", ""),
-                "budget": self.lot_data.get("budget", 0),
-                "participants_count": self.lot_data.get("participants_count", 0),
-                "deadline_days": self.lot_data.get("deadline_days", 0),
-                "city": self.lot_data.get("city", ""),
-            },
+            "lot_data": self.lot_data,  # Return all fields from source data
             "final_score": round(self.final_score, 1),
             "final_level": self.final_level,
             "rule_analysis": self.rule_analysis.to_dict() if self.rule_analysis else None,
@@ -308,16 +300,39 @@ class GoszakupAnalyzer:
             return
 
         if raw_path.exists() and cache_path.stat().st_mtime < raw_path.stat().st_mtime:
-            logger.info("[Analyzer] Cache is older than raw data — skipping")
+            logger.info("[Analyzer] Cache is older than raw data — invalidating")
             return
 
         try:
             payload = json.loads(cache_path.read_text(encoding="utf-8"))
             records = payload.get("records", []) if isinstance(payload, dict) else payload
-            cached = [self._analysis_from_cache(r) for r in records]
+            
+            # Build map of lot_id -> full lot data from real_lots.json for hydration
+            lots_by_id = {}
+            if raw_path.exists():
+                try:
+                    raw_lots = json.loads(raw_path.read_text(encoding="utf-8"))
+                    lots_by_id = {lot.get("lot_id"): lot for lot in raw_lots}
+                    logger.info(f"[Analyzer] Built lot data map from {raw_path}")
+                except Exception as e:
+                    logger.warning(f"[Analyzer] Failed to load raw lots for hydration: {e}")
+            
+            # Load cache and hydrate lot_data with fresh fields
+            cached = []
+            for r in records:
+                analysis = self._analysis_from_cache(r)
+                # Hydrate lot_data with fresh fields from real_lots.json
+                if analysis.lot_id in lots_by_id:
+                    fresh_lot = lots_by_id[analysis.lot_id].copy()
+                    analysis.lot_data = fresh_lot
+                    logger.debug(f"[Analyzer] Hydrated {analysis.lot_id}: unit_price={fresh_lot.get('unit_price', 0)}")
+                else:
+                    logger.debug(f"[Analyzer] Lot {analysis.lot_id} not found in raw data, keeping cached version")
+                cached.append(analysis)
+            
             self._analysis_cache = cached
             self._analysis_progress = len(cached)
-            logger.info(f"[Analyzer] Loaded analysis cache: {len(cached)} lots")
+            logger.info(f"[Analyzer] Loaded and hydrated analysis cache: {len(cached)} lots")
         except Exception as exc:
             logger.warning(f"[Analyzer] Failed to load cache: {exc}")
 
@@ -476,13 +491,12 @@ class GoszakupAnalyzer:
             for flag in analysis.network_result.flags[:3]:
                 explanation.append(f"Сеть: {flag}")
 
-        # TODO: Restore ml_score * 0.50 after training on real labels.csv
-        # Currently rule-based engine is the only reliable signal
+        # Balanced weights: Rules still primary but ML now has more influence
         final = (
-            rule_score * 0.70 +      # Increased from 0.30: rule engine is primary working component
-            ml_score * 0.20 +        # Decreased from 0.50: trained on pseudo-labels, predictions are noisy
-            semantic_score * 0.05 +  # Decreased from 0.10: reallocated to rules
-            network_score * 0.05     # Decreased from 0.10: reallocated to rules
+            rule_score * 0.50 +      # 50%: Rule engine core signal
+            ml_score * 0.40 +        # 40%: ML models (increased for better anomaly detection)
+            semantic_score * 0.05 +  # 5%: Copy-paste detection
+            network_score * 0.05     # 5%: Network flags
         )
         final = min(100.0, max(0.0, final))
         level = get_risk_level(final)
@@ -542,8 +556,15 @@ class GoszakupAnalyzer:
             total_budget += r.lot_data.get("budget", 0)
 
             cat = r.lot_data.get("category_name", "Другое")
+            cat_code = r.lot_data.get("category_code", "")
             if cat not in by_category:
-                by_category[cat] = {"count": 0, "high_risk": 0, "avg_score": 0, "scores": []}
+                by_category[cat] = {
+                    "count": 0, 
+                    "high_risk": 0, 
+                    "avg_score": 0, 
+                    "scores": [],
+                    "category_code": cat_code,
+                }
             by_category[cat]["count"] += 1
             by_category[cat]["scores"].append(r.final_score)
             if r.final_level in ("HIGH", "CRITICAL"):
@@ -553,6 +574,16 @@ class GoszakupAnalyzer:
             s = by_category[cat]["scores"]
             by_category[cat]["avg_score"] = round(sum(s) / len(s), 1) if s else 0
             del by_category[cat]["scores"]
+            
+            # Add price statistics for category
+            cat_code = by_category[cat].get("category_code", "")
+            if cat_code:
+                price_stats = self.feature_engineer.get_category_price_stats(cat_code)
+                if price_stats:
+                    by_category[cat]["median_budget"] = price_stats.get("median", 0)
+                    by_category[cat]["avg_budget"] = price_stats.get("mean", 0)
+                    by_category[cat]["min_budget"] = price_stats.get("min", 0)
+                    by_category[cat]["max_budget"] = price_stats.get("max", 0)
 
         return {
             "total_lots": len(results),

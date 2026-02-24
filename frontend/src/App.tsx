@@ -2,8 +2,13 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import Dashboard from '@/pages/Dashboard';
 import LotsList from '@/pages/LotsList';
-import  LotDetail from '@/pages/LotDetail';
+import LotDetail from '@/pages/LotDetail';
 import ManualAnalysis from '@/pages/ManualAnalysis';
+import PriceAnalysis from '@/pages/PriceAnalysis';
+import Customers from '@/pages/Customers';
+import CustomerDetail from '@/pages/CustomerDetail';
+import Categories from '@/pages/Categories';
+import CategoryDetail from '@/pages/CategoryDetail';
 
 export default function App() {
   return (
@@ -13,6 +18,11 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/lots" element={<LotsList />} />
           <Route path="/lots/:lotId" element={<LotDetail />} />
+          <Route path="/customers" element={<Customers />} />
+          <Route path="/customers/:customerBin" element={<CustomerDetail />} />
+          <Route path="/categories" element={<Categories />} />
+          <Route path="/categories/:categoryCode" element={<CategoryDetail />} />
+          <Route path="/price-analysis" element={<PriceAnalysis />} />
           <Route path="/analyze" element={<ManualAnalysis />} />
         </Route>
       </Routes>

@@ -1,15 +1,17 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLots } from '@/hooks/useApi';
-import { formatBudget, RiskLevel, SortBy } from '@/types/api';
+import { formatBudget, RiskLevel, SortBy, GoszakupApiClient } from '@/types/api';
 import {
     Search,
+    Hash,
     Filter,
     ChevronLeft,
     ChevronRight,
     Loader2,
     ServerCrash,
     ArrowUpDown,
+    Download,
 } from 'lucide-react';
 
 const riskLevelConfig: Record<string, { label: string; class: string }> = {
@@ -27,12 +29,24 @@ export default function LotsList() {
 
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [lotIdSearch, setLotIdSearch] = useState('');
     const [riskFilter, setRiskFilter] = useState<RiskLevel | ''>(
         (searchParams.get('risk_level') as RiskLevel) || ''
     );
     const [sortBy, setSortBy] = useState<SortBy>(SortBy.RISK_SCORE);
     const [sortDesc, setSortDesc] = useState(true);
     const [page, setPage] = useState(0);
+    const [exporting, setExporting] = useState(false);
+
+    const apiClient = useMemo(() => new GoszakupApiClient(), []);
+
+    const normalizeLotIdInput = (value: string) =>
+        value.toLowerCase().replace(/история/gi, '').trim();
+
+    const looksLikeLotId = (value: string) => {
+        const trimmed = normalizeLotIdInput(value);
+        return trimmed.includes('-') && /\d{6,}/.test(trimmed) && !/\s/.test(trimmed);
+    };
 
     // Debounce search
     const handleSearch = (value: string) => {
@@ -65,6 +79,29 @@ export default function LotsList() {
         setPage(0);
     };
 
+    const handleLotIdSearch = () => {
+        const trimmed = normalizeLotIdInput(lotIdSearch);
+        if (!trimmed) {
+            return;
+        }
+        navigate(`/lots/${encodeURIComponent(trimmed)}`);
+    };
+
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            await apiClient.downloadCSV({
+                risk_level: riskFilter || undefined,
+                exclude_synthetic: false,
+            });
+        } catch (err) {
+            console.error('Export failed:', err);
+            alert('Ошибка экспорта. Попробуйте позже.');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     if (error) {
         return (
             <div className="flex items-center justify-center h-[60vh]">
@@ -80,11 +117,30 @@ export default function LotsList() {
     return (
         <div className="space-y-5">
             {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight">Лоты закупок</h1>
-                <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                    Просмотр и фильтрация лотов государственных закупок
-                </p>
+            <div className="flex items-start justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Лоты закупок</h1>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                        Просмотр и фильтрация лотов государственных закупок
+                    </p>
+                </div>
+                <button
+                    onClick={handleExport}
+                    disabled={exporting || loading}
+                    className="btn-secondary flex items-center gap-2"
+                >
+                    {exporting ? (
+                        <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Экспорт...
+                        </>
+                    ) : (
+                        <>
+                            <Download className="w-4 h-4" />
+                            Экспорт CSV
+                        </>
+                    )}
+                </button>
             </div>
 
             {/* Filters */}
@@ -94,11 +150,43 @@ export default function LotsList() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                     <input
                         type="text"
-                        placeholder="Поиск по названию лота..."
+                        placeholder="Поиск по названию или ID лота..."
                         value={search}
                         onChange={(e) => handleSearch(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && looksLikeLotId(search)) {
+                                const normalized = normalizeLotIdInput(search);
+                                navigate(`/lots/${encodeURIComponent(normalized)}`);
+                            }
+                        }}
                         className="input-field pl-10"
                     />
+                </div>
+
+                {/* Lot ID Search */}
+                <div className="flex flex-1 gap-2">
+                    <div className="relative flex-1">
+                        <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                        <input
+                            type="text"
+                            placeholder="Поиск по ID лота..."
+                            value={lotIdSearch}
+                            onChange={(e) => setLotIdSearch(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleLotIdSearch();
+                                }
+                            }}
+                            className="input-field pl-10"
+                        />
+                    </div>
+                    <button
+                        type="button"
+                        className="btn-secondary whitespace-nowrap"
+                        onClick={handleLotIdSearch}
+                    >
+                        Открыть
+                    </button>
                 </div>
 
                 {/* Risk Level Filter */}
@@ -146,6 +234,9 @@ export default function LotsList() {
                                         Бюджет <ArrowUpDown className="w-3 h-3" />
                                     </span>
                                 </th>
+                                <th className="text-right p-3">
+                                    Откл. от медианы
+                                </th>
                                 <th
                                     className="text-right p-3 cursor-pointer select-none hover:text-[hsl(var(--foreground))] transition-colors"
                                     onClick={() => toggleSort(SortBy.RISK_SCORE)}
@@ -167,7 +258,14 @@ export default function LotsList() {
                                         onClick={() => navigate(`/lots/${encodeURIComponent(lot.lot_id)}`)}
                                     >
                                         <td className="p-3 max-w-[300px]">
-                                            <p className="font-medium truncate">{lot.name_ru}</p>
+                                            <p className="font-medium truncate flex items-center gap-2">
+                                                {lot.name_ru}
+                                                {lot.is_synthetic && (
+                                                    <span className="inline-flex items-center gap-0.5 bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0">
+                                                        🤖 Тест
+                                                    </span>
+                                                )}
+                                            </p>
                                             <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-0.5 truncate">
                                                 {lot.lot_id}
                                             </p>
@@ -180,6 +278,21 @@ export default function LotsList() {
                                         </td>
                                         <td className="p-3 text-right font-medium whitespace-nowrap">
                                             {formatBudget(lot.budget)}
+                                        </td>
+                                        <td className="p-3 text-right whitespace-nowrap">
+                                            {lot.price_deviation_pct !== undefined && lot.price_deviation_pct !== null ? (
+                                                <span className={
+                                                    lot.price_deviation_pct > 200 ? 'text-[hsl(var(--risk-critical))] font-bold' :
+                                                        lot.price_deviation_pct > 100 ? 'text-[hsl(var(--risk-high))] font-semibold' :
+                                                            lot.price_deviation_pct > 50 ? 'text-[hsl(var(--risk-medium))]' :
+                                                                lot.price_deviation_pct < 0 ? 'text-[hsl(var(--risk-low))]' :
+                                                                    'text-[hsl(var(--muted-foreground))]'
+                                                }>
+                                                    {lot.price_deviation_pct > 0 ? '+' : ''}{lot.price_deviation_pct.toFixed(0)}%
+                                                </span>
+                                            ) : (
+                                                <span className="text-[hsl(var(--muted-foreground))] text-xs">—</span>
+                                            )}
                                         </td>
                                         <td className="p-3 text-right">
                                             <span className={
@@ -200,7 +313,7 @@ export default function LotsList() {
 
                             {!loading && data?.items.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="p-8 text-center text-[hsl(var(--muted-foreground))]">
+                                    <td colSpan={7} className="p-8 text-center text-[hsl(var(--muted-foreground))]">
                                         Лоты не найдены
                                     </td>
                                 </tr>
@@ -208,7 +321,7 @@ export default function LotsList() {
 
                             {loading && !data && (
                                 <tr>
-                                    <td colSpan={6} className="p-8 text-center">
+                                    <td colSpan={7} className="p-8 text-center">
                                         <Loader2 className="w-6 h-6 animate-spin text-[hsl(var(--primary))] mx-auto" />
                                     </td>
                                 </tr>

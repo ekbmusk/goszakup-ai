@@ -5,12 +5,18 @@ import {
     FileSearch,
     Shield,
     Activity,
+    TrendingUp,
+    Building2,
+    FolderOpen,
 } from 'lucide-react';
 import { useHealth } from '@/hooks/useApi';
 
 const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Дашборд' },
     { to: '/lots', icon: ListChecks, label: 'Лоты' },
+    { to: '/customers', icon: Building2, label: 'Заказчики' },
+    { to: '/categories', icon: FolderOpen, label: 'Категории' },
+    { to: '/price-analysis', icon: TrendingUp, label: 'Анализ по ценам' },
     { to: '/analyze', icon: FileSearch, label: 'Анализ текста' },
 ];
 

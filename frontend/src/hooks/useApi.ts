@@ -6,6 +6,8 @@ import type {
     DashboardStats,
     AnalyzeTextRequest,
     HealthResponse,
+    CategoryPricingResponse,
+    CategoryPricingDetail,
 } from '@/types/api';
 
 const BASE_URL = '';
@@ -143,4 +145,47 @@ export async function submitFeedback(lotId: string, label: 0 | 1, comment?: stri
         method: 'POST',
         body: JSON.stringify({ lot_id: lotId, label, comment }),
     });
+}
+
+// ─── Category Pricing ─────────────────────────────────────
+export function useCategoryPricing(params?: { sort_by?: string; min_count?: number }) {
+    const [data, setData] = useState<CategoryPricingResponse | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetch_ = useCallback(() => {
+        setLoading(true);
+        const query = new URLSearchParams();
+        if (params?.sort_by) query.append('sort_by', params.sort_by);
+        if (params?.min_count) query.append('min_count', String(params.min_count));
+
+        const qs = query.toString();
+        apiFetch<CategoryPricingResponse>(`/api/stats/category-pricing${qs ? `?${qs}` : ''}`)
+            .then(setData)
+            .catch((e) => setError(e.message))
+            .finally(() => setLoading(false));
+    }, [params?.sort_by, params?.min_count]);
+
+    useEffect(() => { fetch_(); }, [fetch_]);
+
+    return { data, loading, error, refetch: fetch_ };
+}
+
+// ─── Category Pricing Detail ──────────────────────────────
+export function useCategoryPricingDetail(categoryCode: string | null) {
+    const [data, setData] = useState<CategoryPricingDetail | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!categoryCode) return;
+        setLoading(true);
+        setError(null);
+        apiFetch<CategoryPricingDetail>(`/api/categories/${encodeURIComponent(categoryCode)}/pricing`)
+            .then(setData)
+            .catch((e) => setError(e.message))
+            .finally(() => setLoading(false));
+    }, [categoryCode]);
+
+    return { data, loading, error };
 }

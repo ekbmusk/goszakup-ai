@@ -201,20 +201,36 @@ class RuleEngine:
 
         # R11 -> PP-5: завышение цены
         total += 1
-        mb = h.get("category_median_budget",0); bu = lot.get("budget",0)
-        if mb and bu:
-            r = bu/mb
-            if r > 5.0: add("R11","PP-5","Критическое завышение цены","price", 0.80, 25, f"Бюджет в {r:.1f}× выше медианы.", f"Бюджет: {bu:,.0f} ₸, медиана: {mb:,.0f} ₸", "critical")
-            elif r > 3.0: add("R11","PP-5","Завышение цены","price", 0.55, 18, f"Бюджет в {r:.1f}× выше медианы.", f"Коэфф: {r:.1f}×", "danger")
-            elif r > 2.0: add("R11","PP-5","Повышенная цена","price", 0.30, 10, f"Бюджет в {r:.1f}× выше медианы.", f"Коэфф: {r:.1f}×", "warning")
+        mb = h.get("category_median_budget",0)  # This is now median unit price
+        
+        # Calculate effective unit price for this lot
+        unit_price = lot.get("unit_price", 0) or 0
+        budget = lot.get("budget", 0) or 0
+        quantity = lot.get("quantity", 0) or 0
+        
+        if unit_price > 0:
+            lot_price = unit_price
+        elif budget > 0 and quantity > 0:
+            lot_price = budget / quantity
+        elif budget > 0:
+            lot_price = budget
+        else:
+            lot_price = 0
+        
+        if mb and lot_price:
+            r = lot_price / mb
+            if r > 5.0: add("R11","PP-5","Критическое завышение цены","price", 0.80, 25, f"Цена в {r:.1f}× выше медианы.", f"Цена: {lot_price:,.0f} ₸, медиана: {mb:,.0f} ₸", "critical")
+            elif r > 3.0: add("R11","PP-5","Завышение цены","price", 0.55, 18, f"Цена в {r:.1f}× выше медианы.", f"Коэфф: {r:.1f}×", "danger")
+            elif r > 2.0: add("R11","PP-5","Повышенная цена","price", 0.30, 10, f"Цена в {r:.1f}× выше медианы.", f"Коэфф: {r:.1f}×", "warning")
             else: skip("R11","Цена в норме")
         else: skip("R11","Нет данных")
 
         # R12 -> SS-12: отсутствие снижения цены
         total += 1
+        budget = lot.get("budget", 0)
         cs = lot.get("contract_sum",0)
-        if bu and cs:
-            pr = cs/bu
+        if budget and cs:
+            pr = cs / budget
             if pr > 0.98 and pp <= 2:
                 add("R12","SS-12","Нет конкурентного снижения цены","price", 0.55, 15, f"Контракт = {pr:.1%} от бюджета при {pp} участнике(ах). SS-12: цена победителя ≈ начальная.", f"Контракт/бюджет: {pr:.1%}", "warning")
             else: skip("R12","Снижение цены есть")

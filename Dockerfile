@@ -11,7 +11,8 @@ RUN pip install --no-cache-dir -U pip && \
     pip install --no-cache-dir -r requirements.txt
 
 COPY src/ ./src/
-COPY data/ ./data/
+COPY data/raw/ ./data/raw/
+COPY data/models/ ./data/models/
 COPY main.py .
 
 EXPOSE 8006

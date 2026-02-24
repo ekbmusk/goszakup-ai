@@ -58,23 +58,29 @@ _IT_BRANDS = [
     "Epson",
     "Cisco", "Catalyst", "Meraki",
     "Huawei", "MateBook",
-    "Intel Core",
-    "AMD Ryzen",
-    "Daikin",  # HVAC
-    "Mitsubishi Electric",  # HVAC/Industrial
+    "Intel Core", "Intel",
+    "AMD Ryzen", "AMD",
+    "Daikin",  # HVAC - CRITICAL
+    "Mitsubishi Electric", "Mitsubishi",  # HVAC/Industrial
     "Bosch",  # Industrial/Tools
     "Siemens",  # Industrial (also in medical)
+    "LG", "Energa",
+    "Toshiba",
+    "Panasonic",
 ]
 
 # ПО
 _SW_BRANDS = [
-    "Microsoft Office", "Windows", "Azure",
-    "Kaspersky", "ESET NOD32",
-    "1C:Предприятие", "1С:Предприятие", "1C:Бухгалтерия",
+    "Microsoft Office", "Microsoft", "Windows", "Azure", "Office 365",
+    "Kaspersky", "ESET NOD32", "ESET",
+    "1C:Предприятие", "1С:Предприятие", "1C:Бухгалтерия", "1C", "1С",
     "SAP", "Oracle",
     "Autodesk", "AutoCAD",
     "Adobe", "Photoshop",
     "VMware", "vSphere",
+    "Tableau",
+    "Salesforce",
+    "QuickBooks",
 ]
 
 # Авто
@@ -84,30 +90,39 @@ _AUTO_BRANDS = [
     "Hyundai", "Sonata", "Tucson", "Santa Fe", "Palisade",
     "Kia", "K5", "K7", "Sportage", "Sorento", "Carnival",
     "Chevrolet", "Tahoe", "Traverse",
-    "BMW",
+    "BMW", "Mini",
     "Mercedes-Benz", "Mercedes",
-    "Audi",
+    "Audi", "Audi",
     "Volkswagen", "Passat", "Tiguan",
     "Mitsubishi", "Pajero", "Outlander",
-    "Nissan", "Patrol", "X-Trail",
+    "Nissan", "Patrol", "X-Trail", "Leaf",
     "Ford", "Explorer",
+    "Volvo",
+    "Dacia",
+    "Skoda",
 ]
 
 # Медицинское
 _MED_BRANDS = [
     "Siemens", "Healthineers", "MAGNETOM",
     "Philips", "IntelliVue", "EPIQ",
-    "GE Healthcare",
+    "GE Healthcare", "GE",
     "Mindray",
-    "Dräger", "Drager",
+    "Dräger", "Drager", "Draeger",
     "Olympus",
     "Medtronic",
     "Stryker",
     "Roche",
-    "Bayer",  # Pharma
+    "Bayer",  # Pharma - CRITICAL
     "Pfizer",
     "Novartis",
     "AstraZeneca",
+    "Johnson & Johnson",
+    "Abbott",
+    "Eli Lilly",
+    "Bristol Myers",
+    "Merck",
+    "Moderna",
 ]
 
 # Лабораторное / промышленное
@@ -119,21 +134,45 @@ _LAB_BRANDS = [
     "Waters",
     "PerkinElmer",
     "Mettler Toledo",
+    "FLIR",
+    "LabX",
 ]
 
 # Промышленное оборудование / строительная техника
 _INDUSTRIAL_BRANDS = [
-    "Caterpillar",
+    "Caterpillar", "CAT",
     "Komatsu",
+    "Volvo", "Volvo Construction",
+    "JCB",
+    "Liebherr",
+    "Sany",
+    "XCMG",
+    "Doosan",
+    "Hitachi", "Hitachi Construction",
+    "Yuchai",
+    "Weichai",
 ]
 
-ALL_BRANDS = _IT_BRANDS + _SW_BRANDS + _AUTO_BRANDS + _MED_BRANDS + _LAB_BRANDS + _INDUSTRIAL_BRANDS
+# Оборудование для связи / networks
+_NETWORK_BRANDS = [
+    "Huawei", "ZTE", "Nokia", "Ericsson",
+    "Arista", "Juniper", "Arista Networks",
+    "Mellanox", "NVIDIA",
+]
+
+ALL_BRANDS = _IT_BRANDS + _SW_BRANDS + _AUTO_BRANDS + _MED_BRANDS + _LAB_BRANDS + _INDUSTRIAL_BRANDS + _NETWORK_BRANDS
 
 # Шаблоны брендов (без учета регистра, по границам слов)
+# Используем гибкие границы слов для обработки пунктуации и специальных символов
 _BRAND_PATTERNS = []
-for brand in sorted(ALL_BRANDS, key=len, reverse=True):
+for brand in sorted(set(ALL_BRANDS), key=len, reverse=True):  # Remove duplicates, longest first
     escaped = re.escape(brand)
-    pattern = re.compile(r"\b" + escaped + r"\b", re.IGNORECASE)
+    # Use flexible word boundaries that handle hyphens, special chars: (?:^|[^\w]) and (?:[^\w]|$)
+    # But still match within word boundaries for normal text
+    pattern = re.compile(
+        r"(?:^|(?<=[^\w])|(?<=[^а-яёіўў]))" + escaped + r"(?:$|(?=[^\w\-])|(?=[^а-яё]))",
+        re.IGNORECASE | re.UNICODE
+    )
     _BRAND_PATTERNS.append((brand, pattern))
 
 

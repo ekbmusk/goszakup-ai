@@ -105,11 +105,12 @@ class FeatureEngineer:
 
     def __init__(self):
         self.ner = NERExtractor()
-        self._category_budgets: dict[str, list[float]] = {}
-        self._customer_winner_counts: Counter = Counter()  # (customer, winner) pairs
+        self._category_budgets: dict[str, list[float]] = {}  # stores unit_price with fallback to budget
+        self._customer_winner_counts: Counter = Counter()  # (customer, winner) pairs - TOTAL count
         self._pair_counts: Counter = Counter()
         self._category_text_stats: dict[str, dict] = {}
-        self._customer_ktru_history: dict[tuple, list[str]] = {}  # (customer, ktru) -> [dates]
+        self._customer_ktru_history: dict[tuple, list[dict]] = {}  # (customer, ktru) -> [{"date": str, "lot_id": str}]
+        self._customer_winner_history: dict[tuple, list[dict]] = {}  # (customer, winner) -> [{"date": str, "lot_id": str}]
 
     def fit_history(self, lots: list[dict]):
         """Считает исторические статистики для относительных признаков."""
@@ -117,16 +118,34 @@ class FeatureEngineer:
         self._customer_winner_counts.clear()
         self._pair_counts.clear()
         self._customer_ktru_history.clear()
+        self._customer_winner_history.clear()
         category_text_lengths: dict[str, list[int]] = {}
 
         for lot in lots:
             cat = lot.get("category_code", "")
-            budget = lot.get("budget", 0)
-            if cat and budget:
-                self._category_budgets.setdefault(cat, []).append(budget)
+            
+            # Use unit_price if available and > 0, otherwise fallback to budget
+            unit_price = lot.get("unit_price", 0) or 0
+            budget = lot.get("budget", 0) or 0
+            quantity = lot.get("quantity", 0) or 0
+            
+            # Calculate effective price
+            if unit_price > 0:
+                price = unit_price
+            elif budget > 0 and quantity > 0:
+                price = budget / quantity  # Calculate unit price from budget
+            elif budget > 0:
+                price = budget  # Fallback to total budget
+            else:
+                price = 0
+            
+            if cat and price > 0:
+                self._category_budgets.setdefault(cat, []).append(price)
 
             winner = lot.get("winner_bin", "")
             customer = lot.get("customer_bin", "")
+            lot_id = lot.get("lot_id", "")
+            publish_date = lot.get("publish_date", "")
             
             # Count per (customer, winner) pair for collusion detection
             if winner and customer:
@@ -137,11 +156,21 @@ class FeatureEngineer:
             if cat and desc:
                 category_text_lengths.setdefault(cat, []).append(len(desc))
 
-            # Store dates for temporal window calculation
+            # Store dates for temporal window calculation - for same customer KTRU in 30 days
             if customer and cat:
-                publish_date = lot.get("publish_date", "")
                 if publish_date:
-                    self._customer_ktru_history.setdefault((customer, cat), []).append(publish_date)
+                    self._customer_ktru_history.setdefault((customer, cat), []).append({
+                        "date": publish_date.split()[0],  # Extract just the date part YYYY-MM-DD
+                        "lot_id": lot_id
+                    })
+            
+            # Store dates for winner repeat history - for same customer winner in 30 days
+            if customer and winner:
+                if publish_date:
+                    self._customer_winner_history.setdefault((customer, winner), []).append({
+                        "date": publish_date.split()[0],  # Extract just the date part YYYY-MM-DD
+                        "lot_id": lot_id
+                    })
 
         self._category_text_stats.clear()
         for cat, lengths in category_text_lengths.items():
@@ -167,20 +196,48 @@ class FeatureEngineer:
             try:
                 current_date = datetime.strptime(publish_date.split()[0], "%Y-%m-%d")
                 dates_history = self._customer_ktru_history.get((customer, category), [])
-                for hist_date_str in dates_history:
+                for hist_record in dates_history:
                     try:
-                        hist_date = datetime.strptime(hist_date_str.split()[0], "%Y-%m-%d")
-                        # Count lots within 30 days BEFORE current lot
-                        if timedelta(days=0) <= (current_date - hist_date) <= timedelta(days=30):
-                            same_ktru_count += 1
-                    except (ValueError, IndexError):
+                        hist_date = datetime.strptime(hist_record["date"], "%Y-%m-%d")
+                        # Count lots within 30 days BEFORE current lot (exclude current lot itself)
+                        diff = (current_date - hist_date).days
+                        if 0 <= diff <= 30:
+                            # Don't count the same lot twice
+                            if hist_record["lot_id"] != lot.get("lot_id", ""):
+                                same_ktru_count += 1
+                    except (ValueError, KeyError):
                         continue
             except (ValueError, IndexError):
                 # Fallback to simple count if date parsing fails
                 same_ktru_count = len(self._customer_ktru_history.get((customer, category), []))
         
+        # Calculate 30-day window for winner repeats (CRITICAL FIX!)
+        # This affects R10 rule (systematic preference detection)
+        winner_repeat_30d = 0
+        if publish_date and customer and winner:
+            try:
+                current_date = datetime.strptime(publish_date.split()[0], "%Y-%m-%d")
+                winner_history = self._customer_winner_history.get((customer, winner), [])
+                for hist_record in winner_history:
+                    try:
+                        hist_date = datetime.strptime(hist_record["date"], "%Y-%m-%d")
+                        # Count lots within 30 days BEFORE current lot (exclude current lot itself)
+                        diff = (current_date - hist_date).days
+                        if 0 <= diff <= 30:
+                            # Don't count the same lot twice
+                            if hist_record["lot_id"] != lot.get("lot_id", ""):
+                                winner_repeat_30d += 1
+                    except (ValueError, KeyError):
+                        continue
+            except (ValueError, IndexError):
+                # Fallback to total count if date parsing fails (preserves historical behavior)
+                winner_repeat_30d = self._customer_winner_counts.get((customer, winner), 0)
+        
         return {
-            "winner_wins_count": self._customer_winner_counts.get((customer, winner), 0),
+            # Use 30-day windowed count for winner wins (fixes noisy R10 rule)
+            "winner_wins_count": winner_repeat_30d,
+            # Keep total count for reference if needed
+            "winner_wins_count_total": self._customer_winner_counts.get((customer, winner), 0),
             "category_median_budget": self._get_median_budget(category),
             "category_avg_text_length": text_stats.get("avg", 0),
             "category_std_text_length": text_stats.get("std", 0),
@@ -188,7 +245,7 @@ class FeatureEngineer:
         }
 
     def _get_median_budget(self, category_code: str) -> float:
-        """Медианный бюджет по категории."""
+        """Медианная цена за единицу по категории (или budget если unit_price недоступна)."""
         budgets = self._category_budgets.get(category_code, [])
         if not budgets:
             return 0.0
@@ -197,6 +254,41 @@ class FeatureEngineer:
         if n % 2 == 0:
             return (sorted_b[n // 2 - 1] + sorted_b[n // 2]) / 2
         return sorted_b[n // 2]
+
+    def get_category_price_stats(self, category_code: str) -> dict | None:
+        """Полная статистика цен за единицу по категории."""
+        budgets = self._category_budgets.get(category_code, [])
+        if not budgets:
+            return None
+        
+        sorted_b = sorted(budgets)
+        n = len(sorted_b)
+        
+        # Median
+        if n % 2 == 0:
+            median = (sorted_b[n // 2 - 1] + sorted_b[n // 2]) / 2
+        else:
+            median = sorted_b[n // 2]
+        
+        # Mean and std dev
+        mean = sum(sorted_b) / n
+        variance = sum((x - mean) ** 2 for x in sorted_b) / n
+        std_dev = variance ** 0.5
+        
+        # Percentiles
+        p25_idx = max(0, int(n * 0.25) - 1)
+        p75_idx = min(n - 1, int(n * 0.75))
+        
+        return {
+            "count": n,
+            "median": median,
+            "min": sorted_b[0],
+            "max": sorted_b[-1],
+            "mean": mean,
+            "std_dev": std_dev,
+            "percentile_25": sorted_b[p25_idx],
+            "percentile_75": sorted_b[p75_idx],
+        }
 
     def extract_features(self, lot: dict) -> LotFeatures:
         """Извлекает полный набор признаков из лота."""
@@ -246,12 +338,70 @@ class FeatureEngineer:
 
         winner = lot.get("winner_bin", "")
         customer = lot.get("customer_bin", "")
-        features.winner_repeat_count = self._customer_winner_counts.get((customer, winner), 0)
-        features.customer_winner_pair_count = self._pair_counts.get(
-            (customer, winner), 0
+        
+        # Use 30-day windowed counts instead of total counts (THIS IS THE FIX!)
+        publish_date = lot.get("publish_date", "")
+        lot_id = lot.get("lot_id", "")
+        
+        # Calculate winner_repeat_count as 30-day window
+        features.winner_repeat_count = self._calculate_winner_repeat_30d(
+            customer, winner, publish_date, lot_id
+        )
+        
+        # Calculate same_customer_ktru_lots_30d
+        features.customer_winner_pair_count = self._calculate_same_customer_ktru_30d(
+            customer, features.category_code, publish_date, lot_id
         )
 
         return features
+    
+    def _calculate_winner_repeat_30d(self, customer: str, winner: str, publish_date: str, lot_id: str) -> int:
+        """Рассчитывает количество побед того же поставщика у заказчика в течение 30 дней."""
+        if not publish_date or not customer or not winner:
+            return 0
+        
+        try:
+            current_date = datetime.strptime(publish_date.split()[0], "%Y-%m-%d")
+            winner_history = self._customer_winner_history.get((customer, winner), [])
+            count = 0
+            for hist_record in winner_history:
+                try:
+                    hist_date = datetime.strptime(hist_record["date"], "%Y-%m-%d")
+                    diff = (current_date - hist_date).days
+                    if 0 <= diff <= 30:
+                        # Don't count the same lot twice
+                        if hist_record["lot_id"] != lot_id:
+                            count += 1
+                except (ValueError, KeyError):
+                    continue
+            return count
+        except (ValueError, IndexError):
+            # Fallback to total count if date parsing fails
+            return self._customer_winner_counts.get((customer, winner), 0)
+    
+    def _calculate_same_customer_ktru_30d(self, customer: str, category: str, publish_date: str, lot_id: str) -> int:
+        """Рассчитывает количество лотов у заказчика в одной категории в течение 30 дней."""
+        if not publish_date or not customer or not category:
+            return 0
+        
+        try:
+            current_date = datetime.strptime(publish_date.split()[0], "%Y-%m-%d")
+            ktru_history = self._customer_ktru_history.get((customer, category), [])
+            count = 0
+            for hist_record in ktru_history:
+                try:
+                    hist_date = datetime.strptime(hist_record["date"], "%Y-%m-%d")
+                    diff = (current_date - hist_date).days
+                    if 0 <= diff <= 30:
+                        # Don't count the same lot twice
+                        if hist_record["lot_id"] != lot_id:
+                            count += 1
+                except (ValueError, KeyError):
+                    continue
+            return count
+        except (ValueError, IndexError):
+            # Fallback to simple count if date parsing fails
+            return len(self._customer_ktru_history.get((customer, category), []))
 
     def extract_batch(self, lots: list[dict]) -> list[LotFeatures]:
         """Извлекает признаки для набора лотов."""
