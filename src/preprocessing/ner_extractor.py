@@ -60,6 +60,10 @@ _IT_BRANDS = [
     "Huawei", "MateBook",
     "Intel Core",
     "AMD Ryzen",
+    "Daikin",  # HVAC
+    "Mitsubishi Electric",  # HVAC/Industrial
+    "Bosch",  # Industrial/Tools
+    "Siemens",  # Industrial (also in medical)
 ]
 
 # ПО
@@ -100,6 +104,10 @@ _MED_BRANDS = [
     "Medtronic",
     "Stryker",
     "Roche",
+    "Bayer",  # Pharma
+    "Pfizer",
+    "Novartis",
+    "AstraZeneca",
 ]
 
 # Лабораторное / промышленное
@@ -113,7 +121,13 @@ _LAB_BRANDS = [
     "Mettler Toledo",
 ]
 
-ALL_BRANDS = _IT_BRANDS + _SW_BRANDS + _AUTO_BRANDS + _MED_BRANDS + _LAB_BRANDS
+# Промышленное оборудование / строительная техника
+_INDUSTRIAL_BRANDS = [
+    "Caterpillar",
+    "Komatsu",
+]
+
+ALL_BRANDS = _IT_BRANDS + _SW_BRANDS + _AUTO_BRANDS + _MED_BRANDS + _LAB_BRANDS + _INDUSTRIAL_BRANDS
 
 # Шаблоны брендов (без учета регистра, по границам слов)
 _BRAND_PATTERNS = []
@@ -136,6 +150,9 @@ _EXCLUSIVE_PATTERNS = [
     (re.compile(r"сублицензирование\s+не\s+допуска", re.IGNORECASE), "сублицензирование не допускается"),
     (re.compile(r"только\s+оригинальн\w+", re.IGNORECASE), "только оригинальное"),
     (re.compile(r"только\s+прямые\s+поставки", re.IGNORECASE), "только прямые поставки"),
+    (re.compile(r"замена\s+поставщик\w+\s+не\s+допуска", re.IGNORECASE), "замена поставщика не допускается"),
+    (re.compile(r"только\s+ТОО\s+[«\"]?\w+", re.IGNORECASE), "заточка под конкретное ТОО"),
+    (re.compile(r"поставщик\s+обязан\s+быть", re.IGNORECASE), "обязательство поставщика"),
 ]
 
 # === Юридические/дилерские маркеры ===
@@ -146,11 +163,12 @@ _LEGAL_PATTERNS = [
     (re.compile(r"статус\w*\s+(?:авторизованн|сертифицированн)", re.IGNORECASE), "требование статуса"),
     (re.compile(r"сертификат\w*\s+(?:дилер|партн[её]р)", re.IGNORECASE), "сертификат дилера"),
     (re.compile(r"опыт\s+(?:поставок|установки|внедрения)\s+.*?не\s+менее\s+\d+", re.IGNORECASE), "требование опыта"),
+    (re.compile(r"поставщик\s+(?:должен|обязан)\s+иметь", re.IGNORECASE), "обязательное требование к поставщику"),
 ]
 
 # === Гео-ограничения ===
 _GEO_PATTERNS = [
-    (re.compile(r"(?:склад|офис|сервисн\w+\s+центр)\s+в\s+(?:г\.?\s*)?(?:Астан|Алмат|Шымкент|Караганд|Акто|Атыра|Павлодар)", re.IGNORECASE), "географическое ограничение (город)"),
+    (re.compile(r"(?:склад|офис|сервисн\w+\s+центр)\s+(?:в|на)\s+(?:г\.?\s*)?\w+", re.IGNORECASE), "географическое ограничение (город)"),
     (re.compile(r"в\s+(?:радиусе|пределах)\s+\d+\s*(?:км|километр)", re.IGNORECASE), "ограничение по радиусу"),
     (re.compile(r"собственн\w+\s+склад\w*\s+.*?площад\w+\s+не\s+менее", re.IGNORECASE), "требование к складу"),
     (re.compile(r"на\s+территории\s+(?:Республики\s+)?Казахстан", re.IGNORECASE), "ограничение территорией РК"),
@@ -205,7 +223,8 @@ class NERExtractor:
         for brand_name, pattern in _BRAND_PATTERNS:
             for match in pattern.finditer(text):
                 pos = (match.start(), match.end())
-                if any(s <= match.start() < e or s < match.end() <= e for s, e in seen_positions):
+                # Check for ANY overlap: s < match.end() AND match.start() < e
+                if any(s < match.end() and match.start() < e for s, e in seen_positions):
                     continue
 
                 found.append(Entity(

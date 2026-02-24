@@ -133,15 +133,10 @@ class GoszakupAnalyzer:
         logger.info(f"[Analyzer] 🔧 Extracted features for {len(all_features)} lots")
 
         self.vectorizer.build_index(self._lots)
-
         self.network.build_graph(self._lots)
-
         self._load_analysis_cache()
-
-        # Check if we have real data (10500+ lots) vs mock data (<100 lots)
         has_real_data = len(self._lots) > 100
         
-        # Always retrain if we have real data to ensure models are up-to-date
         should_retrain = FORCE_TRAIN or has_real_data or not self.scorer.is_fitted
         
         if not should_retrain:
@@ -481,11 +476,13 @@ class GoszakupAnalyzer:
             for flag in analysis.network_result.flags[:3]:
                 explanation.append(f"Сеть: {flag}")
 
+        # TODO: Restore ml_score * 0.50 after training on real labels.csv
+        # Currently rule-based engine is the only reliable signal
         final = (
-            rule_score * 0.30 +
-            ml_score * 0.50 +
-            semantic_score * 0.10 +
-            network_score * 0.10
+            rule_score * 0.70 +      # Increased from 0.30: rule engine is primary working component
+            ml_score * 0.20 +        # Decreased from 0.50: trained on pseudo-labels, predictions are noisy
+            semantic_score * 0.05 +  # Decreased from 0.10: reallocated to rules
+            network_score * 0.05     # Decreased from 0.10: reallocated to rules
         )
         final = min(100.0, max(0.0, final))
         level = get_risk_level(final)

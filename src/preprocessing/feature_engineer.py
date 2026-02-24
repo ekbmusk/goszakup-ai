@@ -1,6 +1,7 @@
 """Извлечение признаков из лотов для ML."""
 from dataclasses import dataclass, field, asdict
 from collections import Counter
+from datetime import datetime, timedelta
 
 import numpy as np
 
@@ -105,17 +106,17 @@ class FeatureEngineer:
     def __init__(self):
         self.ner = NERExtractor()
         self._category_budgets: dict[str, list[float]] = {}
-        self._winner_counts: Counter = Counter()
+        self._customer_winner_counts: Counter = Counter()  # (customer, winner) pairs
         self._pair_counts: Counter = Counter()
         self._category_text_stats: dict[str, dict] = {}
-        self._customer_ktru_counts: Counter = Counter()
+        self._customer_ktru_history: dict[tuple, list[str]] = {}  # (customer, ktru) -> [dates]
 
     def fit_history(self, lots: list[dict]):
         """Считает исторические статистики для относительных признаков."""
         self._category_budgets.clear()
-        self._winner_counts.clear()
+        self._customer_winner_counts.clear()
         self._pair_counts.clear()
-        self._customer_ktru_counts.clear()
+        self._customer_ktru_history.clear()
         category_text_lengths: dict[str, list[int]] = {}
 
         for lot in lots:
@@ -125,19 +126,22 @@ class FeatureEngineer:
                 self._category_budgets.setdefault(cat, []).append(budget)
 
             winner = lot.get("winner_bin", "")
-            if winner:
-                self._winner_counts[winner] += 1
-
             customer = lot.get("customer_bin", "")
+            
+            # Count per (customer, winner) pair for collusion detection
             if winner and customer:
+                self._customer_winner_counts[(customer, winner)] += 1
                 self._pair_counts[(customer, winner)] += 1
 
             desc = clean_text(lot.get("desc_ru", "") + " " + lot.get("extra_desc_ru", ""))
             if cat and desc:
                 category_text_lengths.setdefault(cat, []).append(len(desc))
 
+            # Store dates for temporal window calculation
             if customer and cat:
-                self._customer_ktru_counts[(customer, cat)] += 1
+                publish_date = lot.get("publish_date", "")
+                if publish_date:
+                    self._customer_ktru_history.setdefault((customer, cat), []).append(publish_date)
 
         self._category_text_stats.clear()
         for cat, lengths in category_text_lengths.items():
@@ -155,12 +159,32 @@ class FeatureEngineer:
         customer = lot.get("customer_bin", "")
         category = lot.get("category_code", "")
         text_stats = self._category_text_stats.get(category, {})
+        
+        # Calculate 30-day window for customer-ktru repeats
+        same_ktru_count = 0
+        publish_date = lot.get("publish_date", "")
+        if publish_date and customer and category:
+            try:
+                current_date = datetime.strptime(publish_date.split()[0], "%Y-%m-%d")
+                dates_history = self._customer_ktru_history.get((customer, category), [])
+                for hist_date_str in dates_history:
+                    try:
+                        hist_date = datetime.strptime(hist_date_str.split()[0], "%Y-%m-%d")
+                        # Count lots within 30 days BEFORE current lot
+                        if timedelta(days=0) <= (current_date - hist_date) <= timedelta(days=30):
+                            same_ktru_count += 1
+                    except (ValueError, IndexError):
+                        continue
+            except (ValueError, IndexError):
+                # Fallback to simple count if date parsing fails
+                same_ktru_count = len(self._customer_ktru_history.get((customer, category), []))
+        
         return {
-            "winner_wins_count": self._winner_counts.get(winner, 0),
+            "winner_wins_count": self._customer_winner_counts.get((customer, winner), 0),
             "category_median_budget": self._get_median_budget(category),
             "category_avg_text_length": text_stats.get("avg", 0),
             "category_std_text_length": text_stats.get("std", 0),
-            "same_customer_ktru_lots_30d": self._customer_ktru_counts.get((customer, category), 0),
+            "same_customer_ktru_lots_30d": same_ktru_count,
         }
 
     def _get_median_budget(self, category_code: str) -> float:
@@ -222,7 +246,7 @@ class FeatureEngineer:
 
         winner = lot.get("winner_bin", "")
         customer = lot.get("customer_bin", "")
-        features.winner_repeat_count = self._winner_counts.get(winner, 0)
+        features.winner_repeat_count = self._customer_winner_counts.get((customer, winner), 0)
         features.customer_winner_pair_count = self._pair_counts.get(
             (customer, winner), 0
         )

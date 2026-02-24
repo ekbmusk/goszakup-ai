@@ -41,6 +41,18 @@ class RiskScorer:
             labels = [1 if s >= threshold else 0 for s in rule_scores]
             positive_count = sum(labels)
             
+            # Warn about pseudo-label usage
+            logger.warning(
+                f"[Scorer] Training on PSEUDO-LABELS generated from rule_scores (threshold={threshold}). "
+                "CatBoost predictions may be invalid until trained on real labels.csv with manual annotations."
+            )
+            
+            if positive_count == 0:
+                logger.error(
+                    "[Scorer] All pseudo-labels are 0 (no high-risk lots in training data). "
+                    "ML score will be near-zero for all predictions. Collect real labels urgently."
+                )
+            
             # If we have only one class, adjust threshold to create balance
             if len(set(labels)) < 2:
                 logger.warning(f"[Scorer] Generated labels have only one class. Adjusting threshold...")
