@@ -12,6 +12,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Loader2, ServerCrash, Network as NetworkIcon, Building2, Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface NetworkNode {
     bin: string;
@@ -45,6 +46,7 @@ interface NetworkGraphData {
 type LayoutType = 'horizontal' | 'vertical' | 'circular' | 'grid';
 
 export default function NetworkGraph() {
+    const { t } = useTranslation();
     const [data, setData] = useState<NetworkGraphData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -152,7 +154,7 @@ export default function NetworkGraph() {
                 });
                 setNodes([]);
                 setEdges([]);
-                setError('Нет данных для отображения. Попробуйте изменить фильтры.');
+                setError(t('network.noData'));
                 return;
             }
 
@@ -182,7 +184,7 @@ export default function NetworkGraph() {
                                     {node.name || node.bin}
                                 </div>
                                 <div className="text-[10px] text-gray-500">
-                                    {node.total_lots} лотов
+                                    {node.total_lots} {t('common.lots')}
                                 </div>
                             </div>
                         )
@@ -248,7 +250,7 @@ export default function NetworkGraph() {
             <div className="flex items-center justify-center h-[60vh]">
                 <div className="text-center space-y-4">
                     <Loader2 className="w-10 h-10 animate-spin text-[hsl(var(--primary))] mx-auto" />
-                    <p className="text-[hsl(var(--muted-foreground))] text-sm">Построение графа связей...</p>
+                    <p className="text-[hsl(var(--muted-foreground))] text-sm">{t('network.loading')}</p>
                 </div>
             </div>
         );
@@ -259,9 +261,9 @@ export default function NetworkGraph() {
             <div className="flex items-center justify-center h-[60vh]">
                 <div className="text-center space-y-4 glass-card p-8">
                     <ServerCrash className="w-12 h-12 text-[hsl(var(--destructive))] mx-auto" />
-                    <p className="text-[hsl(var(--foreground))] font-semibold">Ошибка загрузки</p>
+                    <p className="text-[hsl(var(--foreground))] font-semibold">{t('network.loadError')}</p>
                     <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                        {error || 'Не удалось загрузить данные графа'}
+                        {error || t('network.noData')}
                     </p>
                 </div>
             </div>
@@ -275,10 +277,10 @@ export default function NetworkGraph() {
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
                         <NetworkIcon className="w-7 h-7 text-[hsl(var(--primary))]" />
-                        Граф связей заказчик-поставщик
+                        {t('network.title')}
                     </h1>
                     <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                        Визуализация сети взаимоотношений в государственных закупках
+                        {t('network.subtitle')}
                     </p>
                 </div>
 
@@ -298,7 +300,7 @@ export default function NetworkGraph() {
                         </select>
                     </div>
                     <div className="flex flex-col gap-1">
-                        <label className="text-xs text-[hsl(var(--muted-foreground))]">Мин. связей</label>
+                        <label className="text-xs text-[hsl(var(--muted-foreground))]">{t('network.minLots')}</label>
                         <select
                             value={minConnections}
                             onChange={(e) => setMinConnections(Number(e.target.value))}
@@ -331,27 +333,27 @@ export default function NetworkGraph() {
             <div className="grid grid-cols-4 gap-4">
                 <div className="glass-card p-3">
                     <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-                        Всего узлов
+                        {t('network.connections')}
                     </div>
                     <div className="text-xl font-bold">{data.stats.total_nodes}</div>
                 </div>
                 <div className="glass-card p-3">
                     <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1 flex items-center gap-1">
                         <Building2 className="w-3 h-3" />
-                        Заказчиков
+                        {t('network.customers')}
                     </div>
                     <div className="text-xl font-bold">{data.stats.customer_count}</div>
                 </div>
                 <div className="glass-card p-3">
                     <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1 flex items-center gap-1">
                         <Users className="w-3 h-3" />
-                        Поставщиков
+                        {t('network.suppliers')}
                     </div>
                     <div className="text-xl font-bold">{data.stats.supplier_count}</div>
                 </div>
                 <div className="glass-card p-3">
                     <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-                        Связей
+                        {t('network.connections')}
                     </div>
                     <div className="text-xl font-bold">{data.stats.total_edges}</div>
                 </div>
@@ -361,22 +363,22 @@ export default function NetworkGraph() {
             <div className="glass-card p-3 flex items-center gap-6 text-xs">
                 <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded" style={{ background: 'hsl(var(--primary))' }}></div>
-                    <span>Заказчик</span>
+                    <span>{t('network.customers')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded" style={{ background: 'hsl(var(--secondary))' }}></div>
-                    <span>Поставщик</span>
+                    <span>{t('network.suppliers')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded border-2" style={{
                         background: 'hsl(var(--risk-high))',
                         borderColor: 'hsl(var(--risk-critical))'
                     }}></div>
-                    <span>Высокий риск</span>
+                    <span>{t('common.riskHigh')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-0.5 bg-[hsl(var(--muted-foreground))]"></div>
-                    <span>Связь (толщина = кол-во контрактов)</span>
+                    <span>{t('network.connections')}</span>
                 </div>
             </div>
 

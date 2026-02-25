@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { formatBudget } from '@/types/api';
 import {
     FolderOpen,
     SearchIcon,
-    BarChart3,
     AlertTriangle,
     Loader2,
     ChevronRight,
@@ -21,13 +21,14 @@ interface Category {
 }
 
 export default function Categories() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState<'lot_count' | 'total_budget' | 'avg_risk_score'>('lot_count');
-    const [sortDesc, setSortDesc] = useState(true);
+    const [sortDesc] = useState(true);
     const [page, setPage] = useState(0);
     const [total, setTotal] = useState(0);
     const pageSize = 20;
@@ -94,10 +95,10 @@ export default function Categories() {
             <div>
                 <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
                     <FolderOpen className="w-6 h-6" />
-                    Категории закупок
+                    {t('categories.title')}
                 </h1>
                 <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                    Анализ рисков по категориям
+                    {t('categories.subtitle')}
                 </p>
             </div>
 
@@ -107,7 +108,7 @@ export default function Categories() {
                     <SearchIcon className="absolute left-3 top-2.5 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                     <input
                         type="text"
-                        placeholder="Поиск по названию или коду..."
+                        placeholder={t('categories.searchPlaceholder')}
                         value={search}
                         onChange={(e) => {
                             setSearch(e.target.value);
@@ -124,9 +125,9 @@ export default function Categories() {
                     }}
                     className="px-4 py-2 rounded-lg bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]"
                 >
-                    <option value="lot_count">По количеству лотов</option>
-                    <option value="total_budget">По общему бюджету</option>
-                    <option value="avg_risk_score">По среднему риску</option>
+                    <option value="lot_count">{t('common.sortByLotCount')}</option>
+                    <option value="total_budget">{t('common.sortByBudget')}</option>
+                    <option value="avg_risk_score">{t('common.sortByRisk')}</option>
                 </select>
             </div>
 
@@ -167,13 +168,13 @@ export default function Categories() {
 
                                     <div className="grid grid-cols-2 gap-2 text-sm">
                                         <div>
-                                            <p className="text-[hsl(var(--muted-foreground))] text-xs">Лотов</p>
+                                            <p className="text-[hsl(var(--muted-foreground))] text-xs">{t('categories.lotsCount')}</p>
                                             <p className="font-semibold text-[hsl(var(--foreground))]">
                                                 {category.lot_count}
                                             </p>
                                         </div>
                                         <div>
-                                            <p className="text-[hsl(var(--muted-foreground))] text-xs">Бюджет</p>
+                                            <p className="text-[hsl(var(--muted-foreground))] text-xs">{t('categories.budget')}</p>
                                             <p className="font-semibold text-[hsl(var(--foreground))]">
                                                 {formatBudget(category.total_budget)}
                                             </p>
@@ -181,17 +182,17 @@ export default function Categories() {
                                     </div>
 
                                     <div>
-                                        <p className="text-[hsl(var(--muted-foreground))] text-xs mb-2">Средний риск</p>
+                                        <p className="text-[hsl(var(--muted-foreground))] text-xs mb-2">{t('categories.avgRisk')}</p>
                                         <div className="flex items-center gap-2">
                                             <div className="flex-1 bg-[hsl(var(--secondary))] rounded-full h-2">
                                                 <div
                                                     className={`h-2 rounded-full transition-all ${category.avg_risk_score >= 75
-                                                            ? 'bg-[hsl(var(--risk-critical))]'
-                                                            : category.avg_risk_score >= 50
-                                                                ? 'bg-[hsl(var(--risk-high))]'
-                                                                : category.avg_risk_score >= 25
-                                                                    ? 'bg-[hsl(var(--risk-medium))]'
-                                                                    : 'bg-[hsl(var(--risk-low))]'
+                                                        ? 'bg-[hsl(var(--risk-critical))]'
+                                                        : category.avg_risk_score >= 50
+                                                            ? 'bg-[hsl(var(--risk-high))]'
+                                                            : category.avg_risk_score >= 25
+                                                                ? 'bg-[hsl(var(--risk-medium))]'
+                                                                : 'bg-[hsl(var(--risk-low))]'
                                                         }`}
                                                     style={{ width: `${category.avg_risk_score}%` }}
                                                 />
@@ -209,13 +210,13 @@ export default function Categories() {
                                     {category.high_critical_count > 0 && (
                                         <div className="flex items-center gap-2 text-sm text-[hsl(var(--risk-high))]">
                                             <AlertTriangle className="w-4 h-4" />
-                                            {category.high_critical_count} критичных
+                                            {category.high_critical_count} {t('categories.critical')}
                                         </div>
                                     )}
 
                                     <div className="pt-2 border-t border-[hsl(var(--border))] flex items-center justify-between">
                                         <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                                            Подробнее
+                                            {t('common.details')}
                                         </span>
                                         <ChevronRight className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                                     </div>
@@ -227,7 +228,7 @@ export default function Categories() {
                     {/* Pagination */}
                     <div className="flex items-center justify-between mt-6">
                         <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                            Показано {page * pageSize + 1}-{Math.min((page + 1) * pageSize, total)} из {total}
+                            {t('common.showing', { from: page * pageSize + 1, to: Math.min((page + 1) * pageSize, total), total })}
                         </p>
                         <div className="flex gap-2">
                             <button
@@ -235,14 +236,14 @@ export default function Categories() {
                                 disabled={page === 0}
                                 className="px-3 py-2 rounded-lg bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] text-[hsl(var(--foreground))] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[hsl(var(--primary))] hover:text-white transition-colors"
                             >
-                                ← Назад
+                                {t('common.back')}
                             </button>
                             <button
                                 onClick={() => setPage(page + 1)}
                                 disabled={(page + 1) * pageSize >= total}
                                 className="px-3 py-2 rounded-lg bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] text-[hsl(var(--foreground))] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[hsl(var(--primary))] hover:text-white transition-colors"
                             >
-                                Вперед →
+                                {t('common.forward')}
                             </button>
                         </div>
                     </div>

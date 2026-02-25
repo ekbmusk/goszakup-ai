@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTextAnalysis } from '@/hooks/useApi';
 import { formatBudget } from '@/types/api';
 import {
@@ -12,13 +13,6 @@ import {
     RotateCcw,
 } from 'lucide-react';
 
-const riskConfig: Record<string, { label: string; class: string; color: string }> = {
-    LOW: { label: 'Низкий', class: 'risk-low', color: 'hsl(var(--risk-low))' },
-    MEDIUM: { label: 'Средний', class: 'risk-medium', color: 'hsl(var(--risk-medium))' },
-    HIGH: { label: 'Высокий', class: 'risk-high', color: 'hsl(var(--risk-high))' },
-    CRITICAL: { label: 'Критический', class: 'risk-critical', color: 'hsl(var(--risk-critical))' },
-};
-
 const severityColors: Record<string, string> = {
     low: 'hsl(var(--risk-low))',
     medium: 'hsl(var(--risk-medium))',
@@ -27,6 +21,7 @@ const severityColors: Record<string, string> = {
 };
 
 export default function ManualAnalysis() {
+    const { t } = useTranslation();
     const [text, setText] = useState('');
     const [budget, setBudget] = useState('');
     const [participants, setParticipants] = useState('');
@@ -34,6 +29,13 @@ export default function ManualAnalysis() {
     const [categoryCode, setCategoryCode] = useState('');
 
     const { data: analysis, loading, error, analyze } = useTextAnalysis();
+
+    const riskConfig: Record<string, { label: string; class: string; color: string }> = {
+        LOW: { label: t('common.riskLow'), class: 'risk-low', color: 'hsl(var(--risk-low))' },
+        MEDIUM: { label: t('common.riskMedium'), class: 'risk-medium', color: 'hsl(var(--risk-medium))' },
+        HIGH: { label: t('common.riskHigh'), class: 'risk-high', color: 'hsl(var(--risk-high))' },
+        CRITICAL: { label: t('common.riskCritical'), class: 'risk-critical', color: 'hsl(var(--risk-critical))' },
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -58,16 +60,23 @@ export default function ManualAnalysis() {
 
     const cfg = analysis ? riskConfig[analysis.final_level] || riskConfig.HIGH : null;
 
+    const getScoreMessage = (score: number) => {
+        if (score >= 75) return t('manualAnalysis.recommendReformulate');
+        if (score >= 50) return t('manualAnalysis.potentialRisks');
+        if (score >= 25) return t('manualAnalysis.minorRemarks');
+        return t('manualAnalysis.specOk');
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
             <div>
                 <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
                     <FileSearch className="w-6 h-6 text-[hsl(var(--primary))]" />
-                    Анализ текста
+                    {t('manualAnalysis.title')}
                 </h1>
                 <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                    Проверьте текст технического задания на риски до публикации
+                    {t('manualAnalysis.subtitle')}
                 </p>
             </div>
 
@@ -78,12 +87,12 @@ export default function ManualAnalysis() {
                         {/* Text Area */}
                         <div>
                             <label className="block text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5">
-                                Текст спецификации / ТЗ *
+                                {t('manualAnalysis.specLabel')}
                             </label>
                             <textarea
                                 value={text}
                                 onChange={(e) => setText(e.target.value)}
-                                placeholder="Вставьте текст технического задания или описание товара для анализа..."
+                                placeholder={t('manualAnalysis.specPlaceholder')}
                                 className="textarea-field min-h-[200px]"
                                 required
                             />
@@ -93,7 +102,7 @@ export default function ManualAnalysis() {
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <label className="block text-[10px] font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1">
-                                    Бюджет (₸)
+                                    {t('manualAnalysis.budgetLabel')}
                                 </label>
                                 <input
                                     type="number"
@@ -105,7 +114,7 @@ export default function ManualAnalysis() {
                             </div>
                             <div>
                                 <label className="block text-[10px] font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1">
-                                    Участники
+                                    {t('manualAnalysis.participantsLabel')}
                                 </label>
                                 <input
                                     type="number"
@@ -117,7 +126,7 @@ export default function ManualAnalysis() {
                             </div>
                             <div>
                                 <label className="block text-[10px] font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1">
-                                    Срок (дней)
+                                    {t('manualAnalysis.deadlineLabel')}
                                 </label>
                                 <input
                                     type="number"
@@ -129,7 +138,7 @@ export default function ManualAnalysis() {
                             </div>
                             <div>
                                 <label className="block text-[10px] font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1">
-                                    Код ТРУ
+                                    {t('manualAnalysis.categoryCodeLabel')}
                                 </label>
                                 <input
                                     type="text"
@@ -147,12 +156,12 @@ export default function ManualAnalysis() {
                                 {loading ? (
                                     <>
                                         <Loader2 className="w-4 h-4 animate-spin" />
-                                        Анализ...
+                                        {t('manualAnalysis.analyzing')}
                                     </>
                                 ) : (
                                     <>
                                         <Send className="w-4 h-4" />
-                                        Проверить
+                                        {t('manualAnalysis.analyze')}
                                     </>
                                 )}
                             </button>
@@ -175,7 +184,7 @@ export default function ManualAnalysis() {
                         <div className="glass-card p-8 text-center">
                             <FileSearch className="w-12 h-12 text-[hsl(var(--muted-foreground))] mx-auto opacity-30" />
                             <p className="text-sm text-[hsl(var(--muted-foreground))] mt-3">
-                                Вставьте текст и нажмите "Проверить"
+                                {t('manualAnalysis.emptyPrompt')}
                             </p>
                         </div>
                     )}
@@ -184,7 +193,7 @@ export default function ManualAnalysis() {
                         <div className="glass-card p-8 text-center">
                             <Loader2 className="w-8 h-8 animate-spin text-[hsl(var(--primary))] mx-auto" />
                             <p className="text-sm text-[hsl(var(--muted-foreground))] mt-3">
-                                AI анализирует текст...
+                                {t('manualAnalysis.aiAnalyzing')}
                             </p>
                         </div>
                     )}
@@ -203,13 +212,7 @@ export default function ManualAnalysis() {
                                     <div>
                                         <span className={`risk-badge ${cfg.class} text-sm`}>{cfg.label}</span>
                                         <p className="text-sm text-[hsl(var(--foreground))] mt-2 font-medium">
-                                            {analysis.final_score >= 75
-                                                ? '⚠️ Рекомендуется переформулировать спецификацию'
-                                                : analysis.final_score >= 50
-                                                    ? '⚡ Обнаружены потенциальные риски'
-                                                    : analysis.final_score >= 25
-                                                        ? '📝 Незначительные замечания'
-                                                        : '✅ Спецификация в порядке'}
+                                            {getScoreMessage(analysis.final_score)}
                                         </p>
                                     </div>
                                 </div>
@@ -220,7 +223,7 @@ export default function ManualAnalysis() {
                                 <div className="glass-card p-5">
                                     <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
                                         <Shield className="w-4 h-4 text-[hsl(var(--primary))]" />
-                                        Обнаруженные риски
+                                        {t('manualAnalysis.detectedRisks')}
                                     </h3>
                                     <div className="space-y-2.5">
                                         {analysis.rule_analysis.rules_triggered.map((rule, i) => (
@@ -246,7 +249,7 @@ export default function ManualAnalysis() {
                             {analysis.rule_analysis.rules_triggered.length === 0 && (
                                 <div className="glass-card p-5 flex items-center gap-3">
                                     <CheckCircle2 className="w-5 h-5 text-[hsl(var(--primary))]" />
-                                    <span className="text-sm text-[hsl(var(--primary))]">Нарушений правил не обнаружено</span>
+                                    <span className="text-sm text-[hsl(var(--primary))]">{t('manualAnalysis.noViolations')}</span>
                                 </div>
                             )}
 
@@ -254,7 +257,7 @@ export default function ManualAnalysis() {
                             <div className="glass-card p-5">
                                 <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
                                     <Brain className="w-4 h-4 text-[hsl(var(--primary))]" />
-                                    ML-Предсказание
+                                    {t('manualAnalysis.mlPrediction')}
                                 </h3>
                                 <div className="grid grid-cols-3 gap-3">
                                     <div className="p-2.5 rounded-lg bg-[hsl(var(--secondary))] text-center">
@@ -277,7 +280,7 @@ export default function ManualAnalysis() {
                             {/* Explanation */}
                             {analysis.explanation.length > 0 && (
                                 <div className="glass-card p-5">
-                                    <h3 className="text-sm font-semibold mb-3">Объяснение</h3>
+                                    <h3 className="text-sm font-semibold mb-3">{t('manualAnalysis.explanation')}</h3>
                                     <ul className="space-y-1.5">
                                         {analysis.explanation.map((text, i) => (
                                             <li key={i} className="flex gap-2 text-sm text-[hsl(var(--muted-foreground))]">

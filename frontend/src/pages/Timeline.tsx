@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { Loader2, ServerCrash, TrendingUp, Calendar, AlertTriangle } from 'lucide-react';
+import { Loader2, ServerCrash, TrendingUp, AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 type PeriodType = 'day' | 'week' | 'month' | 'quarter';
 
@@ -26,6 +27,7 @@ interface TimelineResponse {
 }
 
 export default function Timeline() {
+    const { t } = useTranslation();
     const [data, setData] = useState<TimelineResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -55,7 +57,7 @@ export default function Timeline() {
             <div className="flex items-center justify-center h-[60vh]">
                 <div className="text-center space-y-4">
                     <Loader2 className="w-10 h-10 animate-spin text-[hsl(var(--primary))] mx-auto" />
-                    <p className="text-[hsl(var(--muted-foreground))] text-sm">Загрузка временной динамики...</p>
+                    <p className="text-[hsl(var(--muted-foreground))] text-sm">{t('timeline.title')}...</p>
                 </div>
             </div>
         );
@@ -66,7 +68,7 @@ export default function Timeline() {
             <div className="flex items-center justify-center h-[60vh]">
                 <div className="text-center space-y-4 glass-card p-8">
                     <ServerCrash className="w-12 h-12 text-[hsl(var(--destructive))] mx-auto" />
-                    <p className="text-[hsl(var(--foreground))] font-semibold">Ошибка загрузки</p>
+                    <p className="text-[hsl(var(--foreground))] font-semibold">{t('timeline.loadError')}</p>
                     <p className="text-sm text-[hsl(var(--muted-foreground))]">{error}</p>
                 </div>
             </div>
@@ -75,9 +77,9 @@ export default function Timeline() {
 
     const chartData = data.timeline.map(item => ({
         period: item.period,
-        'Лотов': item.count,
-        'Средний риск': item.avg_risk,
-        'Высокий риск %': item.high_risk_pct,
+        [t('timeline.lotsCount')]: item.count,
+        [t('dashboard.avgRisk')]: item.avg_risk,
+        [t('dashboard.highRisk') + ' %']: item.high_risk_pct,
         'LOW': item.risk_dist.LOW,
         'MEDIUM': item.risk_dist.MEDIUM,
         'HIGH': item.risk_dist.HIGH,
@@ -91,10 +93,10 @@ export default function Timeline() {
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
                         <TrendingUp className="w-7 h-7 text-[hsl(var(--primary))]" />
-                        Временная динамика рисков
+                        {t('timeline.title')}
                     </h1>
                     <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                        Анализ изменения уровней риска во времени
+                        {t('timeline.subtitle')}
                     </p>
                 </div>
 
@@ -105,20 +107,20 @@ export default function Timeline() {
                         onChange={(e) => setPeriod(e.target.value as PeriodType)}
                         className="input-field text-sm"
                     >
-                        <option value="day">По дням</option>
-                        <option value="week">По неделям</option>
-                        <option value="month">По месяцам</option>
-                        <option value="quarter">По кварталам</option>
+                        <option value="day">{t('timeline.period')}: {t('timeline.week')}</option>
+                        <option value="week">{t('timeline.period')}: {t('timeline.week')}</option>
+                        <option value="month">{t('timeline.period')}: {t('timeline.month')}</option>
+                        <option value="quarter">{t('timeline.period')}: {t('timeline.quarter')}</option>
                     </select>
                     <select
                         value={limit}
                         onChange={(e) => setLimit(Number(e.target.value))}
                         className="input-field text-sm"
                     >
-                        <option value="6">6 периодов</option>
-                        <option value="12">12 периодов</option>
-                        <option value="24">24 периода</option>
-                        <option value="36">36 периодов</option>
+                        <option value="6">6</option>
+                        <option value="12">12</option>
+                        <option value="24">24</option>
+                        <option value="36">36</option>
                     </select>
                 </div>
             </div>
@@ -127,13 +129,13 @@ export default function Timeline() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="glass-card p-4">
                     <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-                        Всего периодов
+                        {t('timeline.period')}
                     </div>
                     <div className="text-2xl font-bold">{data.total_periods}</div>
                 </div>
                 <div className="glass-card p-4">
                     <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-                        Всего лотов
+                        {t('dashboard.totalLots')}
                     </div>
                     <div className="text-2xl font-bold">
                         {data.timeline.reduce((sum, item) => sum + item.count, 0).toLocaleString()}
@@ -141,7 +143,7 @@ export default function Timeline() {
                 </div>
                 <div className="glass-card p-4">
                     <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-                        Средний риск
+                        {t('timeline.avgRisk')}
                     </div>
                     <div className="text-2xl font-bold">
                         {(data.timeline.reduce((sum, item) => sum + item.avg_risk, 0) / data.timeline.length).toFixed(1)}
@@ -149,7 +151,7 @@ export default function Timeline() {
                 </div>
                 <div className="glass-card p-4">
                     <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-                        Ср. высокий риск
+                        {t('dashboard.highRisk')} %
                     </div>
                     <div className="text-2xl font-bold text-[hsl(var(--risk-high))]">
                         {(data.timeline.reduce((sum, item) => sum + item.high_risk_pct, 0) / data.timeline.length).toFixed(1)}%
@@ -161,7 +163,7 @@ export default function Timeline() {
             <div className="space-y-6">
                 {/* Lots Count & Risk Score */}
                 <div className="glass-card p-6">
-                    <h2 className="text-sm font-semibold mb-4">Количество лотов и средний риск</h2>
+                    <h2 className="text-sm font-semibold mb-4">{t('timeline.lotsCount')} &amp; {t('timeline.avgRisk')}</h2>
                     <ResponsiveContainer width="100%" height={300}>
                         <AreaChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -196,7 +198,7 @@ export default function Timeline() {
 
                 {/* Risk Distribution Stack */}
                 <div className="glass-card p-6">
-                    <h2 className="text-sm font-semibold mb-4">Распределение по уровням риска</h2>
+                    <h2 className="text-sm font-semibold mb-4">{t('dashboard.riskDistribution')}</h2>
                     <ResponsiveContainer width="100%" height={300}>
                         <BarChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -222,7 +224,7 @@ export default function Timeline() {
                 <div className="glass-card p-6">
                     <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4 text-[hsl(var(--risk-high))]" />
-                        Процент лотов с высоким риском
+                        {t('dashboard.highRisk')} %
                     </h2>
                     <ResponsiveContainer width="100%" height={200}>
                         <LineChart data={chartData}>

@@ -1,6 +1,7 @@
 import { useDashboardStats } from '@/hooks/useApi';
 import { formatBudget, RiskLevel } from '@/types/api';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
     TrendingUp,
     AlertTriangle,
@@ -12,23 +13,24 @@ import {
     ServerCrash,
 } from 'lucide-react';
 
-const riskLevelConfig = {
-    LOW: { label: 'Низкий', class: 'risk-low', color: 'hsl(var(--risk-low))' },
-    MEDIUM: { label: 'Средний', class: 'risk-medium', color: 'hsl(var(--risk-medium))' },
-    HIGH: { label: 'Высокий', class: 'risk-high', color: 'hsl(var(--risk-high))' },
-    CRITICAL: { label: 'Критический', class: 'risk-critical', color: 'hsl(var(--risk-critical))' },
-};
-
 export default function Dashboard() {
+    const { t } = useTranslation();
     const { data: stats, loading, error } = useDashboardStats();
     const navigate = useNavigate();
+
+    const riskLevelConfig = {
+        LOW: { label: t('common.riskLow'), class: 'risk-low', color: 'hsl(var(--risk-low))' },
+        MEDIUM: { label: t('common.riskMedium'), class: 'risk-medium', color: 'hsl(var(--risk-medium))' },
+        HIGH: { label: t('common.riskHigh'), class: 'risk-high', color: 'hsl(var(--risk-high))' },
+        CRITICAL: { label: t('common.riskCritical'), class: 'risk-critical', color: 'hsl(var(--risk-critical))' },
+    };
 
     if (loading) {
         return (
             <div className="flex items-center justify-center h-[60vh]">
                 <div className="text-center space-y-4">
                     <Loader2 className="w-10 h-10 animate-spin text-[hsl(var(--primary))] mx-auto" />
-                    <p className="text-[hsl(var(--muted-foreground))] text-sm">Загрузка статистики...</p>
+                    <p className="text-[hsl(var(--muted-foreground))] text-sm">{t('dashboard.loadingStats')}</p>
                 </div>
             </div>
         );
@@ -39,8 +41,8 @@ export default function Dashboard() {
             <div className="flex items-center justify-center h-[60vh]">
                 <div className="text-center space-y-4 glass-card p-8">
                     <ServerCrash className="w-12 h-12 text-[hsl(var(--destructive))] mx-auto" />
-                    <p className="text-[hsl(var(--foreground))] font-semibold">Не удалось загрузить данные</p>
-                    <p className="text-sm text-[hsl(var(--muted-foreground))]">{error || 'Проверьте подключение к API'}</p>
+                    <p className="text-[hsl(var(--foreground))] font-semibold">{t('common.errorLoadData')}</p>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))]">{error || t('common.checkApiConnection')}</p>
                 </div>
             </div>
         );
@@ -49,29 +51,29 @@ export default function Dashboard() {
     const statCards = [
         {
             icon: BarChart3,
-            label: 'Всего лотов',
+            label: t('dashboard.totalLots'),
             value: stats.total_lots.toLocaleString(),
-            sub: `Обработано: ${stats.processed_lots.toLocaleString()}`,
+            sub: t('dashboard.processed', { count: stats.processed_lots }),
         },
         {
             icon: TrendingUp,
-            label: 'Средний риск',
+            label: t('dashboard.avgRisk'),
             value: stats.avg_score.toFixed(1),
-            sub: 'Баллов из 100',
+            sub: t('dashboard.outOf100'),
             highlight: stats.avg_score > 50,
         },
         {
             icon: AlertTriangle,
-            label: 'Высокий + Критический',
+            label: t('dashboard.highCritical'),
             value: ((stats.by_level.HIGH || 0) + (stats.by_level.CRITICAL || 0)).toLocaleString(),
-            sub: 'Лотов с высоким риском',
+            sub: t('dashboard.highRiskLots'),
             highlight: true,
         },
         {
             icon: DollarSign,
-            label: 'Общий бюджет',
+            label: t('dashboard.totalBudget'),
             value: formatBudget(stats.total_budget),
-            sub: 'Закупки в тенге',
+            sub: t('dashboard.budgetNote'),
         },
     ];
 
@@ -81,9 +83,9 @@ export default function Dashboard() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold tracking-tight">Дашборд</h1>
+                <h1 className="text-2xl font-bold tracking-tight">{t('dashboard.title')}</h1>
                 <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                    Обзор рисков государственных закупок РК
+                    {t('dashboard.subtitle')}
                 </p>
             </div>
 
@@ -113,7 +115,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Bar Distribution */}
                 <div className="glass-card p-5 lg:col-span-1">
-                    <h2 className="text-sm font-semibold mb-4">Распределение по рискам</h2>
+                    <h2 className="text-sm font-semibold mb-4">{t('dashboard.riskDistribution')}</h2>
                     <div className="space-y-3">
                         {(Object.keys(riskLevelConfig) as RiskLevel[]).map((level) => {
                             const count = stats.by_level[level] || 0;
@@ -142,15 +144,15 @@ export default function Dashboard() {
 
                 {/* Categories */}
                 <div className="glass-card p-5 lg:col-span-2">
-                    <h2 className="text-sm font-semibold mb-4">Категории закупок</h2>
+                    <h2 className="text-sm font-semibold mb-4">{t('dashboard.procurementCategories')}</h2>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="table-header">
-                                    <th className="text-left p-2.5 rounded-l-md">Категория</th>
-                                    <th className="text-right p-2.5">Кол-во</th>
-                                    <th className="text-right p-2.5">Высокий риск</th>
-                                    <th className="text-right p-2.5 rounded-r-md">Ср. балл</th>
+                                    <th className="text-left p-2.5 rounded-l-md">{t('dashboard.category')}</th>
+                                    <th className="text-right p-2.5">{t('dashboard.count')}</th>
+                                    <th className="text-right p-2.5">{t('dashboard.highRisk')}</th>
+                                    <th className="text-right p-2.5 rounded-r-md">{t('dashboard.avgScore')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -185,18 +187,18 @@ export default function Dashboard() {
             {/* Synthetic vs Real Data Comparison */}
             {stats.data_type_stats && (
                 <div className="glass-card p-5">
-                    <h2 className="text-sm font-semibold mb-4">🤖 Тестовые vs Реальные данные</h2>
+                    <h2 className="text-sm font-semibold mb-4">{t('dashboard.testVsReal')}</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Data Type Breakdown */}
                         <div>
                             <h3 className="text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase mb-3">
-                                Распределение данных
+                                {t('dashboard.dataDistribution')}
                             </h3>
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 border border-blue-200">
                                     <div>
-                                        <p className="text-sm font-semibold text-blue-900">Реальные закупки</p>
-                                        <p className="text-xs text-blue-700 mt-0.5">Проверенные данные</p>
+                                        <p className="text-sm font-semibold text-blue-900">{t('dashboard.realProcurements')}</p>
+                                        <p className="text-xs text-blue-700 mt-0.5">{t('dashboard.verifiedData')}</p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-2xl font-bold text-blue-900">
@@ -209,8 +211,8 @@ export default function Dashboard() {
                                 </div>
                                 <div className="flex items-center justify-between p-3 rounded-lg bg-purple-50 border border-purple-200">
                                     <div>
-                                        <p className="text-sm font-semibold text-purple-900">Тестовые данные</p>
-                                        <p className="text-xs text-purple-700 mt-0.5">Синтетические лоты</p>
+                                        <p className="text-sm font-semibold text-purple-900">{t('dashboard.testData')}</p>
+                                        <p className="text-xs text-purple-700 mt-0.5">{t('dashboard.syntheticLots')}</p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-2xl font-bold text-purple-900">
@@ -227,7 +229,7 @@ export default function Dashboard() {
                         {/* Risk Comparison */}
                         <div>
                             <h3 className="text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase mb-3">
-                                Сравнение рисков
+                                {t('dashboard.riskComparison')}
                             </h3>
                             <div className="space-y-2">
                                 {(Object.keys(riskLevelConfig) as RiskLevel[]).map((level) => {
@@ -277,11 +279,11 @@ export default function Dashboard() {
                             <div className="flex gap-4 mt-4 text-xs">
                                 <div className="flex items-center gap-1.5">
                                     <div className="w-3 h-3 rounded bg-blue-500"></div>
-                                    <span className="text-[hsl(var(--muted-foreground))]">Реальные</span>
+                                    <span className="text-[hsl(var(--muted-foreground))]">{t('dashboard.real')}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <div className="w-3 h-3 rounded bg-purple-500"></div>
-                                    <span className="text-[hsl(var(--muted-foreground))]">Тестовые</span>
+                                    <span className="text-[hsl(var(--muted-foreground))]">{t('dashboard.test')}</span>
                                 </div>
                             </div>
                         </div>
@@ -294,13 +296,13 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-semibold flex items-center gap-2">
                         <ShieldAlert className="w-4 h-4 text-[hsl(var(--risk-critical))]" />
-                        ТОП рискованных лотов
+                        {t('dashboard.topRisks')}
                     </h2>
                     <button
                         onClick={() => navigate('/lots?risk_level=HIGH')}
                         className="btn-secondary text-xs"
                     >
-                        Все лоты <ArrowRight className="w-3.5 h-3.5" />
+                        {t('dashboard.allLots')} <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                 </div>
                 <div className="space-y-3">

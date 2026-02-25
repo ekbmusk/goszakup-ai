@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useLotAnalysis, useCategoryPricingDetail } from '@/hooks/useApi';
 import { formatBudget, GoszakupApiClient, type RiskLevel } from '@/types/api';
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ArrowLeft,
     Loader2,
@@ -67,6 +68,7 @@ const getFieldRules = (field: string, rules: any[]): any[] => {
 };
 
 export default function LotDetail() {
+    const { t } = useTranslation();
     const { lotId } = useParams<{ lotId: string }>();
     const navigate = useNavigate();
     const { data: analysis, loading, error } = useLotAnalysis(lotId || null);
@@ -77,6 +79,13 @@ export default function LotDetail() {
     // Load category pricing stats
     const categoryCode = analysis?.lot_data?.category_code;
     const { data: categoryPricing } = useCategoryPricingDetail(categoryCode || null);
+
+    const riskConfig: Record<string, { label: string; class: string; color: string }> = {
+        LOW: { label: t('common.riskLow'), class: 'risk-low', color: 'hsl(var(--risk-low))' },
+        MEDIUM: { label: t('common.riskMedium'), class: 'risk-medium', color: 'hsl(var(--risk-medium))' },
+        HIGH: { label: t('common.riskHigh'), class: 'risk-high', color: 'hsl(var(--risk-high))' },
+        CRITICAL: { label: t('common.riskCritical'), class: 'risk-critical', color: 'hsl(var(--risk-critical))' },
+    };
 
     const handleExportPDF = async () => {
         if (!lotId) return;
@@ -97,7 +106,7 @@ export default function LotDetail() {
             <div className="flex items-center justify-center h-[60vh]">
                 <div className="text-center space-y-4">
                     <Loader2 className="w-10 h-10 animate-spin text-[hsl(var(--primary))] mx-auto" />
-                    <p className="text-[hsl(var(--muted-foreground))] text-sm">Загрузка анализа...</p>
+                    <p className="text-[hsl(var(--muted-foreground))] text-sm">{t('common.loading')}</p>
                 </div>
             </div>
         );
@@ -108,10 +117,10 @@ export default function LotDetail() {
             <div className="flex items-center justify-center h-[60vh]">
                 <div className="text-center space-y-4 glass-card p-8">
                     <ServerCrash className="w-12 h-12 text-[hsl(var(--destructive))] mx-auto" />
-                    <p className="text-[hsl(var(--foreground))] font-semibold">Не удалось загрузить анализ</p>
+                    <p className="text-[hsl(var(--foreground))] font-semibold">{t('lotDetail.loadError')}</p>
                     <p className="text-sm text-[hsl(var(--muted-foreground))]">{error}</p>
                     <button onClick={() => navigate(-1)} className="btn-secondary mt-2">
-                        <ArrowLeft className="w-4 h-4" /> Назад
+                        <ArrowLeft className="w-4 h-4" /> {t('common.back')}
                     </button>
                 </div>
             </div>
@@ -129,7 +138,7 @@ export default function LotDetail() {
             <div>
                 <div className="flex items-center justify-between mb-4">
                     <button onClick={() => navigate(-1)} className="btn-secondary text-xs">
-                        <ArrowLeft className="w-3.5 h-3.5" /> Назад к лотам
+                        <ArrowLeft className="w-3.5 h-3.5" /> {t('lotDetail.back')}
                     </button>
                     <button
                         onClick={handleExportPDF}
@@ -139,12 +148,12 @@ export default function LotDetail() {
                         {exportingPDF ? (
                             <>
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                Экспорт...
+                                {t('lots.exporting')}
                             </>
                         ) : (
                             <>
                                 <Download className="w-3.5 h-3.5" />
-                                Экспорт в PDF
+                                PDF
                             </>
                         )}
                     </button>
@@ -157,7 +166,7 @@ export default function LotDetail() {
                             <h1 className="text-xl font-bold tracking-tight">{lot.name_ru}</h1>
                             {lot.is_synthetic && (
                                 <span className="inline-flex items-center gap-0.5 bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-semibold">
-                                    🤖 Тест
+                                    {t('lotDetail.testData')}
                                 </span>
                             )}
                         </div>
@@ -182,7 +191,7 @@ export default function LotDetail() {
                         </div>
                         <div>
                             <span className={`risk-badge ${cfg.class} text-sm`}>{cfg.label}</span>
-                            <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-1">Итоговый балл</p>
+                            <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-1">{t('lotDetail.riskScore')}</p>
                         </div>
                     </div>
                 </div>
@@ -193,7 +202,7 @@ export default function LotDetail() {
                 <div className="glass-card p-5">
                     <h2 className="text-sm font-semibold flex items-center gap-2 mb-4">
                         <TrendingUp className="w-4 h-4 text-[hsl(var(--primary))]" />
-                        Контекст цены
+                        {t('lotDetail.riskFactors')}
                     </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -201,15 +210,15 @@ export default function LotDetail() {
                         <div>
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-[hsl(var(--muted-foreground))]">Бюджет лота:</span>
+                                    <span className="text-[hsl(var(--muted-foreground))]">{t('lotDetail.budget')}:</span>
                                     <span className="font-semibold">{formatBudget(lot.budget)}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-[hsl(var(--muted-foreground))]">Медиана категории:</span>
+                                    <span className="text-[hsl(var(--muted-foreground))]">{t('lotDetail.priceDeviation')}:</span>
                                     <span className="font-medium">{formatBudget(categoryPricing.stats.median)}</span>
                                 </div>
                                 <div className="flex justify-between items-center pt-2 border-t border-[hsl(var(--border))]">
-                                    <span className="text-[hsl(var(--muted-foreground))]">Отклонение:</span>
+                                    <span className="text-[hsl(var(--muted-foreground))]">{t('lotDetail.priceDeviation')}:</span>
                                     <span className={`font-bold ${((lot.budget - categoryPricing.stats.median) / categoryPricing.stats.median * 100) > 200
                                         ? 'text-[hsl(var(--risk-critical))]'
                                         : ((lot.budget - categoryPricing.stats.median) / categoryPricing.stats.median * 100) > 100
@@ -260,7 +269,7 @@ export default function LotDetail() {
                             </div>
                             <div className="flex justify-between text-[10px] text-[hsl(var(--muted-foreground))] mt-1">
                                 <span>{formatBudget(categoryPricing.stats.min)}</span>
-                                <span>Медиана</span>
+                                <span>{t('priceAnalysis.median')}</span>
                                 <span>{formatBudget(categoryPricing.stats.max)}</span>
                             </div>
                         </div>
@@ -446,7 +455,7 @@ export default function LotDetail() {
                             className="inline-flex items-center gap-2 text-sm text-[hsl(var(--primary))] hover:underline"
                         >
                             <ExternalLink className="w-4 h-4" />
-                            Открыть на портале goszakup.gov.kz
+                            {t('lotDetail.viewOnPortal')}
                         </a>
                     </div>
                 )}
@@ -537,7 +546,7 @@ export default function LotDetail() {
                     {rules.rules_triggered.length === 0 && (
                         <div className="flex items-center gap-2 text-sm text-[hsl(var(--primary))] p-3">
                             <CheckCircle2 className="w-4 h-4" />
-                            Нарушений правил не обнаружено
+                            {t('manualAnalysis.noViolations')}
                         </div>
                     )}
                 </div>

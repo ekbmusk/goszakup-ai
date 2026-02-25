@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useLots } from '@/hooks/useApi';
 import { formatBudget, RiskLevel, SortBy, GoszakupApiClient } from '@/types/api';
 import {
@@ -14,16 +15,10 @@ import {
     Download,
 } from 'lucide-react';
 
-const riskLevelConfig: Record<string, { label: string; class: string }> = {
-    LOW: { label: 'Низкий', class: 'risk-low' },
-    MEDIUM: { label: 'Средний', class: 'risk-medium' },
-    HIGH: { label: 'Высокий', class: 'risk-high' },
-    CRITICAL: { label: 'Критический', class: 'risk-critical' },
-};
-
 const PAGE_SIZE = 20;
 
 export default function LotsList() {
+    const { t } = useTranslation();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
 
@@ -40,6 +35,13 @@ export default function LotsList() {
 
     const apiClient = useMemo(() => new GoszakupApiClient(), []);
 
+    const riskLevelConfig: Record<string, { label: string; class: string }> = {
+        LOW: { label: t('common.riskLow'), class: 'risk-low' },
+        MEDIUM: { label: t('common.riskMedium'), class: 'risk-medium' },
+        HIGH: { label: t('common.riskHigh'), class: 'risk-high' },
+        CRITICAL: { label: t('common.riskCritical'), class: 'risk-critical' },
+    };
+
     const normalizeLotIdInput = (value: string) =>
         value.toLowerCase().replace(/история/gi, '').trim();
 
@@ -48,11 +50,9 @@ export default function LotsList() {
         return trimmed.includes('-') && /\d{6,}/.test(trimmed) && !/\s/.test(trimmed);
     };
 
-    // Debounce search
     const handleSearch = (value: string) => {
         setSearch(value);
         setPage(0);
-        // Simple debounce
         setTimeout(() => setDebouncedSearch(value), 300);
     };
 
@@ -81,9 +81,7 @@ export default function LotsList() {
 
     const handleLotIdSearch = () => {
         const trimmed = normalizeLotIdInput(lotIdSearch);
-        if (!trimmed) {
-            return;
-        }
+        if (!trimmed) return;
         navigate(`/lots/${encodeURIComponent(trimmed)}`);
     };
 
@@ -96,7 +94,7 @@ export default function LotsList() {
             });
         } catch (err) {
             console.error('Export failed:', err);
-            alert('Ошибка экспорта. Попробуйте позже.');
+            alert(t('lots.exportError'));
         } finally {
             setExporting(false);
         }
@@ -107,7 +105,7 @@ export default function LotsList() {
             <div className="flex items-center justify-center h-[60vh]">
                 <div className="text-center space-y-4 glass-card p-8">
                     <ServerCrash className="w-12 h-12 text-[hsl(var(--destructive))] mx-auto" />
-                    <p className="text-[hsl(var(--foreground))] font-semibold">Ошибка загрузки</p>
+                    <p className="text-[hsl(var(--foreground))] font-semibold">{t('lots.loadError')}</p>
                     <p className="text-sm text-[hsl(var(--muted-foreground))]">{error}</p>
                 </div>
             </div>
@@ -119,9 +117,9 @@ export default function LotsList() {
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Лоты закупок</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">{t('lots.title')}</h1>
                     <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                        Просмотр и фильтрация лотов государственных закупок
+                        {t('lots.subtitle')}
                     </p>
                 </div>
                 <button
@@ -132,12 +130,12 @@ export default function LotsList() {
                     {exporting ? (
                         <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            Экспорт...
+                            {t('lots.exporting')}
                         </>
                     ) : (
                         <>
                             <Download className="w-4 h-4" />
-                            Экспорт CSV
+                            {t('lots.exportCsv')}
                         </>
                     )}
                 </button>
@@ -150,7 +148,7 @@ export default function LotsList() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                     <input
                         type="text"
-                        placeholder="Поиск по названию или ID лота..."
+                        placeholder={t('lots.searchPlaceholder')}
                         value={search}
                         onChange={(e) => handleSearch(e.target.value)}
                         onKeyDown={(e) => {
@@ -169,13 +167,11 @@ export default function LotsList() {
                         <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                         <input
                             type="text"
-                            placeholder="Поиск по ID лота..."
+                            placeholder={t('lots.lotIdPlaceholder')}
                             value={lotIdSearch}
                             onChange={(e) => setLotIdSearch(e.target.value)}
                             onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleLotIdSearch();
-                                }
+                                if (e.key === 'Enter') handleLotIdSearch();
                             }}
                             className="input-field pl-10"
                         />
@@ -185,7 +181,7 @@ export default function LotsList() {
                         className="btn-secondary whitespace-nowrap"
                         onClick={handleLotIdSearch}
                     >
-                        Открыть
+                        {t('lots.open')}
                     </button>
                 </div>
 
@@ -200,11 +196,11 @@ export default function LotsList() {
                         }}
                         className="input-field pl-10 pr-8 appearance-none cursor-pointer min-w-[180px]"
                     >
-                        <option value="">Все уровни</option>
-                        <option value="LOW">Низкий</option>
-                        <option value="MEDIUM">Средний</option>
-                        <option value="HIGH">Высокий</option>
-                        <option value="CRITICAL">Критический</option>
+                        <option value="">{t('lots.allLevels')}</option>
+                        <option value="LOW">{t('common.riskLow')}</option>
+                        <option value="MEDIUM">{t('common.riskMedium')}</option>
+                        <option value="HIGH">{t('common.riskHigh')}</option>
+                        <option value="CRITICAL">{t('common.riskCritical')}</option>
                     </select>
                 </div>
             </div>
@@ -212,7 +208,7 @@ export default function LotsList() {
             {/* Results Info */}
             <div className="flex items-center justify-between text-xs text-[hsl(var(--muted-foreground))]">
                 <span>
-                    {data ? `Найдено: ${data.total.toLocaleString()} лотов` : 'Загрузка...'}
+                    {data ? t('lots.found', { count: data.total }) : t('common.loading')}
                 </span>
                 {loading && <Loader2 className="w-4 h-4 animate-spin text-[hsl(var(--primary))]" />}
             </div>
@@ -223,29 +219,29 @@ export default function LotsList() {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="table-header">
-                                <th className="text-left p-3 rounded-tl-lg">Название лота</th>
-                                <th className="text-left p-3">Категория</th>
-                                <th className="text-left p-3">Город</th>
+                                <th className="text-left p-3 rounded-tl-lg">{t('lots.lotName')}</th>
+                                <th className="text-left p-3">{t('lots.category')}</th>
+                                <th className="text-left p-3">{t('lots.city')}</th>
                                 <th
                                     className="text-right p-3 cursor-pointer select-none hover:text-[hsl(var(--foreground))] transition-colors"
                                     onClick={() => toggleSort(SortBy.BUDGET)}
                                 >
                                     <span className="inline-flex items-center gap-1">
-                                        Бюджет <ArrowUpDown className="w-3 h-3" />
+                                        {t('lots.budget')} <ArrowUpDown className="w-3 h-3" />
                                     </span>
                                 </th>
                                 <th className="text-right p-3">
-                                    Откл. от медианы
+                                    {t('lots.medianDeviation')}
                                 </th>
                                 <th
                                     className="text-right p-3 cursor-pointer select-none hover:text-[hsl(var(--foreground))] transition-colors"
                                     onClick={() => toggleSort(SortBy.RISK_SCORE)}
                                 >
                                     <span className="inline-flex items-center gap-1">
-                                        Риск <ArrowUpDown className="w-3 h-3" />
+                                        {t('lots.risk')} <ArrowUpDown className="w-3 h-3" />
                                     </span>
                                 </th>
-                                <th className="text-center p-3 rounded-tr-lg">Уровень</th>
+                                <th className="text-center p-3 rounded-tr-lg">{t('lots.level')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -262,7 +258,7 @@ export default function LotsList() {
                                                 {lot.name_ru}
                                                 {lot.is_synthetic && (
                                                     <span className="inline-flex items-center gap-0.5 bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0">
-                                                        🤖 Тест
+                                                        {t('lots.testBadge')}
                                                     </span>
                                                 )}
                                             </p>
@@ -314,7 +310,7 @@ export default function LotsList() {
                             {!loading && data?.items.length === 0 && (
                                 <tr>
                                     <td colSpan={7} className="p-8 text-center text-[hsl(var(--muted-foreground))]">
-                                        Лоты не найдены
+                                        {t('lots.notFound')}
                                     </td>
                                 </tr>
                             )}
@@ -342,7 +338,7 @@ export default function LotsList() {
                         <ChevronLeft className="w-4 h-4" />
                     </button>
                     <span className="text-sm text-[hsl(var(--muted-foreground))] px-3">
-                        Страница {page + 1} из {totalPages}
+                        {t('common.page', { current: page + 1, total: totalPages })}
                     </span>
                     <button
                         className="btn-secondary"

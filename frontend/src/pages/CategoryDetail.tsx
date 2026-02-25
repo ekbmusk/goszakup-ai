@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { formatBudget } from '@/types/api';
 import {
     FolderOpen,
@@ -10,7 +11,7 @@ import {
     TrendingUp,
 } from 'lucide-react';
 
-interface CategoryDetail {
+interface CategoryDetailData {
     category_code: string;
     category_name: string;
     total_lots: number;
@@ -40,9 +41,10 @@ interface CategoryDetail {
 }
 
 export default function CategoryDetail() {
+    const { t } = useTranslation();
     const { categoryCode } = useParams();
     const navigate = useNavigate();
-    const [category, setCategory] = useState<CategoryDetail | null>(null);
+    const [category, setCategory] = useState<CategoryDetailData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -61,9 +63,7 @@ export default function CategoryDetail() {
             }
         };
 
-        if (categoryCode) {
-            fetchCategory();
-        }
+        if (categoryCode) fetchCategory();
     }, [categoryCode]);
 
     if (loading) {
@@ -77,16 +77,13 @@ export default function CategoryDetail() {
     if (error || !category) {
         return (
             <div className="space-y-4">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 text-[hsl(var(--primary))] hover:underline"
-                >
+                <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[hsl(var(--primary))] hover:underline">
                     <ArrowLeft className="w-4 h-4" />
-                    Назад
+                    {t('common.back')}
                 </button>
                 <div className="glass-card p-6 text-center">
                     <AlertTriangle className="w-8 h-8 text-[hsl(var(--destructive))] mx-auto mb-2" />
-                    <p className="text-[hsl(var(--foreground))]">{error || 'Category not found'}</p>
+                    <p className="text-[hsl(var(--foreground))]">{error || t('categoryDetail.notFound')}</p>
                 </div>
             </div>
         );
@@ -99,16 +96,20 @@ export default function CategoryDetail() {
         return 'text-[hsl(var(--risk-low))]';
     };
 
+    const riskLevels = [
+        { level: 'LOW', label: t('common.riskLow'), color: 'bg-[hsl(var(--risk-low))]' },
+        { level: 'MEDIUM', label: t('common.riskMedium'), color: 'bg-[hsl(var(--risk-medium))]' },
+        { level: 'HIGH', label: t('common.riskHigh'), color: 'bg-[hsl(var(--risk-high))]' },
+        { level: 'CRITICAL', label: t('common.riskCritical'), color: 'bg-[hsl(var(--risk-critical))]' },
+    ];
+
     return (
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <button
-                    onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 text-[hsl(var(--primary))] hover:underline mb-4"
-                >
+                <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[hsl(var(--primary))] hover:underline mb-4">
                     <ArrowLeft className="w-4 h-4" />
-                    Назад к категориям
+                    {t('categoryDetail.back')}
                 </button>
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
@@ -116,7 +117,7 @@ export default function CategoryDetail() {
                         {category.category_name}
                     </h1>
                     <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                        Код: {category.category_code}
+                        {t('categoryDetail.code')}: {category.category_code}
                     </p>
                 </div>
             </div>
@@ -124,35 +125,24 @@ export default function CategoryDetail() {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="glass-card p-4">
-                    <p className="text-xs text-[hsl(var(--muted-foreground))] uppercase">Всего лотов</p>
-                    <p className="text-2xl font-bold text-[hsl(var(--foreground))] mt-2">
-                        {category.total_lots}
-                    </p>
+                    <p className="text-xs text-[hsl(var(--muted-foreground))] uppercase">{t('categoryDetail.totalLots')}</p>
+                    <p className="text-2xl font-bold text-[hsl(var(--foreground))] mt-2">{category.total_lots}</p>
                 </div>
                 <div className="glass-card p-4">
-                    <p className="text-xs text-[hsl(var(--muted-foreground))] uppercase">Общий бюджет</p>
-                    <p className="text-2xl font-bold text-[hsl(var(--foreground))] mt-2">
-                        {formatBudget(category.total_budget)}
-                    </p>
+                    <p className="text-xs text-[hsl(var(--muted-foreground))] uppercase">{t('categoryDetail.totalBudget')}</p>
+                    <p className="text-2xl font-bold text-[hsl(var(--foreground))] mt-2">{formatBudget(category.total_budget)}</p>
                 </div>
                 <div className="glass-card p-4">
-                    <p className="text-xs text-[hsl(var(--muted-foreground))] uppercase">Средний риск</p>
-                    <p className={`text-2xl font-bold mt-2 ${getRiskColor(category.avg_risk_score)}`}>
-                        {category.avg_risk_score}
-                    </p>
+                    <p className="text-xs text-[hsl(var(--muted-foreground))] uppercase">{t('categoryDetail.avgRisk')}</p>
+                    <p className={`text-2xl font-bold mt-2 ${getRiskColor(category.avg_risk_score)}`}>{category.avg_risk_score}</p>
                 </div>
             </div>
 
             {/* Risk Distribution */}
             <div className="glass-card p-6">
-                <h2 className="text-lg font-bold text-[hsl(var(--foreground))] mb-4">Распределение рисков</h2>
+                <h2 className="text-lg font-bold text-[hsl(var(--foreground))] mb-4">{t('categoryDetail.riskDistribution')}</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[
-                        { level: 'LOW', label: 'Низкий', color: 'bg-[hsl(var(--risk-low))]' },
-                        { level: 'MEDIUM', label: 'Средний', color: 'bg-[hsl(var(--risk-medium))]' },
-                        { level: 'HIGH', label: 'Высокий', color: 'bg-[hsl(var(--risk-high))]' },
-                        { level: 'CRITICAL', label: 'Критический', color: 'bg-[hsl(var(--risk-critical))]' },
-                    ].map((item) => (
+                    {riskLevels.map((item) => (
                         <div key={item.level} className="p-3 bg-[hsl(var(--secondary))] rounded-lg border border-[hsl(var(--border))]">
                             <div className={`inline-block w-4 h-4 rounded ${item.color} mb-2`} />
                             <p className="text-sm font-semibold text-[hsl(var(--foreground))]">
@@ -168,22 +158,20 @@ export default function CategoryDetail() {
             <div className="glass-card p-6">
                 <h2 className="text-lg font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
                     <TrendingUp className="w-5 h-5" />
-                    Статистика цен
+                    {t('priceAnalysis.title')}
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {[
-                        { label: 'Медиана', value: formatBudget(category.price_stats.median) },
-                        { label: 'Минимум', value: formatBudget(category.price_stats.min) },
-                        { label: 'Максимум', value: formatBudget(category.price_stats.max) },
-                        { label: 'Среднее', value: formatBudget(category.price_stats.avg) },
-                        { label: 'Станд. отклонение', value: formatBudget(category.price_stats.std_dev) },
-                        { label: 'Выборка', value: category.price_stats.count },
+                        { label: t('priceAnalysis.median'), value: formatBudget(category.price_stats.median) },
+                        { label: 'Min', value: formatBudget(category.price_stats.min) },
+                        { label: 'Max', value: formatBudget(category.price_stats.max) },
+                        { label: t('priceAnalysis.average'), value: formatBudget(category.price_stats.avg) },
+                        { label: 'Std', value: formatBudget(category.price_stats.std_dev) },
+                        { label: 'N', value: category.price_stats.count },
                     ].map((stat, idx) => (
                         <div key={idx} className="p-3 bg-[hsl(var(--secondary))] rounded-lg border border-[hsl(var(--border))]">
                             <p className="text-xs text-[hsl(var(--muted-foreground))]">{stat.label}</p>
-                            <p className="text-lg font-semibold text-[hsl(var(--foreground))] mt-1">
-                                {stat.value}
-                            </p>
+                            <p className="text-lg font-semibold text-[hsl(var(--foreground))] mt-1">{stat.value}</p>
                         </div>
                     ))}
                 </div>
@@ -193,7 +181,7 @@ export default function CategoryDetail() {
             <div className="glass-card p-6">
                 <h2 className="text-lg font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
                     <Building2 className="w-5 h-5" />
-                    Основные заказчики в данной категории
+                    {t('customers.title')}
                 </h2>
                 <div className="space-y-2">
                     {category.top_customers.length > 0 ? (
@@ -201,23 +189,19 @@ export default function CategoryDetail() {
                             <div
                                 key={customer.customer_bin}
                                 onClick={() => navigate(`/customers/${customer.customer_bin}`)}
-                                className="p-3 bg-[hsl(var(--secondary))] rounded-lg border border-[hsl(var(--border))] hover:bg-[hsl(var(--secondary))] cursor-pointer transition-colors flex items-center justify-between"
+                                className="p-3 bg-[hsl(var(--secondary))] rounded-lg border border-[hsl(var(--border))] cursor-pointer flex items-center justify-between hover:opacity-80 transition-opacity"
                             >
                                 <div>
-                                    <h4 className="font-semibold text-[hsl(var(--foreground))]">
-                                        {customer.customer_name}
-                                    </h4>
-                                    <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                                        {customer.customer_bin}
-                                    </p>
+                                    <h4 className="font-semibold text-[hsl(var(--foreground))]">{customer.customer_name}</h4>
+                                    <p className="text-xs text-[hsl(var(--muted-foreground))]">{customer.customer_bin}</p>
                                 </div>
                                 <span className="text-sm font-semibold text-[hsl(var(--foreground))]">
-                                    {customer.lot_count} лотов
+                                    {customer.lot_count} {t('common.lots')}
                                 </span>
                             </div>
                         ))
                     ) : (
-                        <p className="text-[hsl(var(--muted-foreground))]">Нет заказчиков</p>
+                        <p className="text-[hsl(var(--muted-foreground))]">{t('common.noData')}</p>
                     )}
                 </div>
             </div>
@@ -226,7 +210,7 @@ export default function CategoryDetail() {
             <div className="glass-card p-6">
                 <h2 className="text-lg font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
                     <AlertTriangle className="w-5 h-5" />
-                    Лоты с высоким риском
+                    {t('categoryDetail.topLots')}
                 </h2>
                 <div className="space-y-2">
                     {category.sample_high_risk_lots.length > 0 ? (
@@ -234,30 +218,22 @@ export default function CategoryDetail() {
                             <div
                                 key={lot.lot_id}
                                 onClick={() => navigate(`/lots/${lot.lot_id}`)}
-                                className="p-3 bg-[hsl(var(--secondary))] rounded-lg border border-[hsl(var(--border))] hover:bg-[hsl(var(--secondary))] cursor-pointer transition-colors"
+                                className="p-3 bg-[hsl(var(--secondary))] rounded-lg border border-[hsl(var(--border))] cursor-pointer hover:opacity-80 transition-opacity"
                             >
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex-1 min-w-0">
-                                        <h4 className="font-semibold text-[hsl(var(--foreground))] truncate">
-                                            {lot.name_ru}
-                                        </h4>
-                                        <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
-                                            ID: {lot.lot_id}
-                                        </p>
+                                        <h4 className="font-semibold text-[hsl(var(--foreground))] truncate">{lot.name_ru}</h4>
+                                        <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">ID: {lot.lot_id}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-sm font-semibold text-[hsl(var(--foreground))]">
-                                            {formatBudget(lot.budget)}
-                                        </p>
-                                        <p className={`text-sm font-semibold ${getRiskColor(lot.risk_score)}`}>
-                                            {lot.risk_score}
-                                        </p>
+                                        <p className="text-sm font-semibold text-[hsl(var(--foreground))]">{formatBudget(lot.budget)}</p>
+                                        <p className={`text-sm font-semibold ${getRiskColor(lot.risk_score)}`}>{lot.risk_score}</p>
                                     </div>
                                 </div>
                             </div>
                         ))
                     ) : (
-                        <p className="text-[hsl(var(--muted-foreground))]">Нет лотов с высоким риском</p>
+                        <p className="text-[hsl(var(--muted-foreground))]">{t('common.noData')}</p>
                     )}
                 </div>
             </div>

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useCategoryPricing, useLots } from '@/hooks/useApi';
 import { formatBudget } from '@/types/api';
 import type { LotSummary } from '@/types/api';
@@ -20,6 +21,7 @@ type ViewMode = 'categories' | 'lots';
 type LotSortField = 'price_deviation_pct' | 'budget' | 'name_ru' | 'risk_score';
 
 export default function PriceAnalysis() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [sortBy, setSortBy] = useState<SortField>('count');
     const [sortDesc, setSortDesc] = useState(true);
@@ -142,7 +144,7 @@ export default function PriceAnalysis() {
             <div className="flex items-center justify-center h-[60vh]">
                 <div className="text-center space-y-4 glass-card p-8">
                     <ServerCrash className="w-12 h-12 text-[hsl(var(--destructive))] mx-auto" />
-                    <p className="text-[hsl(var(--foreground))] font-semibold">Ошибка загрузки</p>
+                    <p className="text-[hsl(var(--foreground))] font-semibold">{t('priceAnalysis.loadError')}</p>
                     <p className="text-sm text-[hsl(var(--muted-foreground))]">{currentError}</p>
                 </div>
             </div>
@@ -156,12 +158,12 @@ export default function PriceAnalysis() {
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
                         <DollarSign className="w-7 h-7 text-[hsl(var(--primary))]" />
-                        Анализ лотов по ценам
+                        {t('priceAnalysis.title')}
                     </h1>
                     <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
                         {viewMode === 'categories'
-                            ? 'Статистика цен по категориям ТРУ с медианными значениями'
-                            : 'Лоты с отклонением от медианной цены категории'
+                            ? t('priceAnalysis.subtitleCategories')
+                            : t('priceAnalysis.subtitleLots')
                         }
                     </p>
                 </div>
@@ -171,38 +173,38 @@ export default function PriceAnalysis() {
                     <button
                         onClick={() => setViewMode('categories')}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${viewMode === 'categories'
-                                ? 'bg-[hsl(var(--primary))] text-black shadow-sm'
-                                : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
+                            ? 'bg-[hsl(var(--primary))] text-black shadow-sm'
+                            : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
                             }`}
                     >
                         <LayoutGrid className="w-4 h-4" />
-                        Категории
+                        {t('priceAnalysis.categories')}
                     </button>
                     <button
                         onClick={() => setViewMode('lots')}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${viewMode === 'lots'
-                                ? 'bg-[hsl(var(--primary))] text-black shadow-sm'
-                                : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
+                            ? 'bg-[hsl(var(--primary))] text-black shadow-sm'
+                            : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
                             }`}
                     >
                         <List className="w-4 h-4" />
-                        Лоты
+                        {t('priceAnalysis.lots')}
                     </button>
                 </div>
             </div>
 
-            {/* Stats Summary */}
+            {/* Stats Summary — Categories */}
             {viewMode === 'categories' && data && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="glass-card p-4">
                         <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-                            Категорий
+                            {t('priceAnalysis.totalCategories')}
                         </div>
                         <div className="text-2xl font-bold">{data.total.toLocaleString()}</div>
                     </div>
                     <div className="glass-card p-4">
                         <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-                            Всего лотов
+                            {t('priceAnalysis.totalLots')}
                         </div>
                         <div className="text-2xl font-bold">
                             {data.categories.reduce((sum, cat) => sum + cat.count, 0).toLocaleString()}
@@ -210,7 +212,7 @@ export default function PriceAnalysis() {
                     </div>
                     <div className="glass-card p-4">
                         <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-                            Средняя медиана
+                            {t('priceAnalysis.avgMedian')}
                         </div>
                         <div className="text-2xl font-bold">
                             {formatBudget(
@@ -221,17 +223,18 @@ export default function PriceAnalysis() {
                 </div>
             )}
 
+            {/* Stats Summary — Lots */}
             {viewMode === 'lots' && lotsData && (
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div className="glass-card p-4">
                         <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-                            Лотов показано
+                            {t('priceAnalysis.shownLots')}
                         </div>
                         <div className="text-2xl font-bold">{sortedLots.length.toLocaleString()}</div>
                     </div>
                     <div className="glass-card p-4">
                         <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-                            Макс. отклонение
+                            {t('priceAnalysis.maxDeviation')}
                         </div>
                         <div className="text-2xl font-bold text-[hsl(var(--risk-high))]">
                             {sortedLots.length > 0
@@ -242,7 +245,7 @@ export default function PriceAnalysis() {
                     </div>
                     <div className="glass-card p-4">
                         <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-                            Мин. отклонение
+                            {t('priceAnalysis.minDeviation')}
                         </div>
                         <div className="text-2xl font-bold text-[hsl(var(--risk-low))]">
                             {sortedLots.length > 0
@@ -253,7 +256,7 @@ export default function PriceAnalysis() {
                     </div>
                     <div className="glass-card p-4">
                         <div className="text-xs text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-1">
-                            Средний бюджет
+                            {t('priceAnalysis.avgBudget')}
                         </div>
                         <div className="text-2xl font-bold">
                             {sortedLots.length > 0
@@ -277,7 +280,7 @@ export default function PriceAnalysis() {
                                         onClick={() => toggleSort('category_name')}
                                     >
                                         <span className="inline-flex items-center gap-1">
-                                            Категория <ArrowUpDown className="w-3 h-3" />
+                                            {t('priceAnalysis.category')} <ArrowUpDown className="w-3 h-3" />
                                         </span>
                                     </th>
                                     <th
@@ -285,7 +288,7 @@ export default function PriceAnalysis() {
                                         onClick={() => toggleSort('count')}
                                     >
                                         <span className="inline-flex items-center gap-1">
-                                            Лотов <ArrowUpDown className="w-3 h-3" />
+                                            {t('priceAnalysis.lotsCount')} <ArrowUpDown className="w-3 h-3" />
                                         </span>
                                     </th>
                                     <th
@@ -293,18 +296,18 @@ export default function PriceAnalysis() {
                                         onClick={() => toggleSort('median')}
                                     >
                                         <span className="inline-flex items-center gap-1">
-                                            Медиана <ArrowUpDown className="w-3 h-3" />
+                                            {t('priceAnalysis.median')} <ArrowUpDown className="w-3 h-3" />
                                         </span>
                                     </th>
-                                    <th className="text-right p-3">Средняя</th>
-                                    <th className="text-right p-3">Мин / Макс</th>
+                                    <th className="text-right p-3">{t('priceAnalysis.average')}</th>
+                                    <th className="text-right p-3">{t('priceAnalysis.minMax')}</th>
                                     <th
                                         className="text-right p-3 rounded-tr-lg cursor-pointer select-none hover:text-[hsl(var(--foreground))] transition-colors"
                                         onClick={() => toggleSort('high_risk_pct')}
-                                        title="Процент лотов с высоким или критическим уровнем риска в категории"
+                                        title={t('priceAnalysis.highRisk')}
                                     >
                                         <span className="inline-flex items-center gap-1">
-                                            Высокий риск <ArrowUpDown className="w-3 h-3" />
+                                            {t('priceAnalysis.highRisk')} <ArrowUpDown className="w-3 h-3" />
                                         </span>
                                     </th>
                                 </tr>
@@ -362,7 +365,7 @@ export default function PriceAnalysis() {
                                 {!currentLoading && sortedCategories.length === 0 && (
                                     <tr>
                                         <td colSpan={6} className="p-8 text-center text-[hsl(var(--muted-foreground))]">
-                                            Нет данных
+                                            {t('common.noData')}
                                         </td>
                                     </tr>
                                 )}
@@ -377,26 +380,26 @@ export default function PriceAnalysis() {
                                         onClick={() => toggleLotSort('name_ru')}
                                     >
                                         <span className="inline-flex items-center gap-1">
-                                            Лот <ArrowUpDown className="w-3 h-3" />
+                                            {t('priceAnalysis.lot')} <ArrowUpDown className="w-3 h-3" />
                                         </span>
                                     </th>
-                                    <th className="text-left p-3">Категория</th>
+                                    <th className="text-left p-3">{t('priceAnalysis.category')}</th>
                                     <th
                                         className="text-right p-3 cursor-pointer select-none hover:text-[hsl(var(--foreground))] transition-colors"
                                         onClick={() => toggleLotSort('budget')}
                                     >
                                         <span className="inline-flex items-center gap-1">
-                                            Бюджет <ArrowUpDown className="w-3 h-3" />
+                                            {t('priceAnalysis.budget')} <ArrowUpDown className="w-3 h-3" />
                                         </span>
                                     </th>
-                                    <th className="text-right p-3">Медиана категории</th>
+                                    <th className="text-right p-3">{t('priceAnalysis.categoryMedian')}</th>
                                     <th
                                         className="text-right p-3 cursor-pointer select-none hover:text-[hsl(var(--foreground))] transition-colors"
                                         onClick={() => toggleLotSort('price_deviation_pct')}
-                                        title="Отклонение от медианной цены категории"
+                                        title={t('priceAnalysis.deviation')}
                                     >
                                         <span className="inline-flex items-center gap-1">
-                                            Отклонение <ArrowUpDown className="w-3 h-3" />
+                                            {t('priceAnalysis.deviation')} <ArrowUpDown className="w-3 h-3" />
                                         </span>
                                     </th>
                                     <th
@@ -404,7 +407,7 @@ export default function PriceAnalysis() {
                                         onClick={() => toggleLotSort('risk_score')}
                                     >
                                         <span className="inline-flex items-center gap-1">
-                                            Риск <ArrowUpDown className="w-3 h-3" />
+                                            {t('priceAnalysis.risk')} <ArrowUpDown className="w-3 h-3" />
                                         </span>
                                     </th>
                                 </tr>
@@ -425,7 +428,7 @@ export default function PriceAnalysis() {
                                                     {lot.name_ru}
                                                     {lot.is_synthetic && (
                                                         <span className="inline-flex items-center gap-0.5 bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0">
-                                                            🤖 Тест
+                                                            {t('lots.testBadge')}
                                                         </span>
                                                     )}
                                                 </p>
@@ -446,8 +449,8 @@ export default function PriceAnalysis() {
                                                 <div className="flex items-center justify-end gap-1">
                                                     {deviation > 0 ? (
                                                         <TrendingUp className={`w-4 h-4 ${isHighDeviation
-                                                                ? 'text-[hsl(var(--risk-critical))]'
-                                                                : 'text-[hsl(var(--risk-high))]'
+                                                            ? 'text-[hsl(var(--risk-critical))]'
+                                                            : 'text-[hsl(var(--risk-high))]'
                                                             }`} />
                                                     ) : deviation < 0 ? (
                                                         <TrendingDown className="w-4 h-4 text-[hsl(var(--risk-low))]" />
@@ -455,10 +458,10 @@ export default function PriceAnalysis() {
                                                         <Minus className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                                                     )}
                                                     <span className={`font-semibold ${deviation > 200 ? 'text-[hsl(var(--risk-critical))]' :
-                                                            deviation > 100 ? 'text-[hsl(var(--risk-high))]' :
-                                                                deviation > 50 ? 'text-[hsl(var(--risk-medium))]' :
-                                                                    deviation < 0 ? 'text-[hsl(var(--risk-low))]' :
-                                                                        'text-[hsl(var(--muted-foreground))]'
+                                                        deviation > 100 ? 'text-[hsl(var(--risk-high))]' :
+                                                            deviation > 50 ? 'text-[hsl(var(--risk-medium))]' :
+                                                                deviation < 0 ? 'text-[hsl(var(--risk-low))]' :
+                                                                    'text-[hsl(var(--muted-foreground))]'
                                                         }`}>
                                                         {deviation > 0 ? '+' : ''}{deviation.toFixed(0)}%
                                                     </span>
@@ -489,7 +492,7 @@ export default function PriceAnalysis() {
                                 {!currentLoading && sortedLots.length === 0 && (
                                     <tr>
                                         <td colSpan={6} className="p-8 text-center text-[hsl(var(--muted-foreground))]">
-                                            Нет данных
+                                            {t('common.noData')}
                                         </td>
                                     </tr>
                                 )}

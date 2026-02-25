@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
     LayoutDashboard,
     ListChecks,
@@ -10,22 +11,30 @@ import {
     FolderOpen,
     LineChart,
     Network,
+    Languages,
 } from 'lucide-react';
 import { useHealth } from '@/hooks/useApi';
 
-const navItems = [
-    { to: '/', icon: LayoutDashboard, label: 'Дашборд' },
-    { to: '/lots', icon: ListChecks, label: 'Лоты' },
-    { to: '/customers', icon: Building2, label: 'Заказчики' },
-    { to: '/categories', icon: FolderOpen, label: 'Категории' },
-    { to: '/price-analysis', icon: TrendingUp, label: 'Анализ по ценам' },
-    { to: '/timeline', icon: LineChart, label: 'Временная динамика' },
-    { to: '/network', icon: Network, label: 'Граф связей' },
-    { to: '/analyze', icon: FileSearch, label: 'Анализ текста' },
-];
-
 export default function Layout() {
+    const { t, i18n } = useTranslation();
     const { data: health } = useHealth();
+
+    const navItems = [
+        { to: '/', icon: LayoutDashboard, label: t('nav.dashboard') },
+        { to: '/lots', icon: ListChecks, label: t('nav.lots') },
+        { to: '/customers', icon: Building2, label: t('nav.customers') },
+        { to: '/categories', icon: FolderOpen, label: t('nav.categories') },
+        { to: '/price-analysis', icon: TrendingUp, label: t('nav.priceAnalysis') },
+        { to: '/timeline', icon: LineChart, label: t('nav.timeline') },
+        { to: '/network', icon: Network, label: t('nav.network') },
+        { to: '/analyze', icon: FileSearch, label: t('nav.analyzeText') },
+    ];
+
+    const toggleLang = () => {
+        const next = i18n.language === 'ru' ? 'kz' : 'ru';
+        i18n.changeLanguage(next);
+        localStorage.setItem('lang', next);
+    };
 
     return (
         <div className="flex h-screen overflow-hidden">
@@ -43,7 +52,7 @@ export default function Layout() {
                                 <span className="text-[hsl(var(--foreground))]">AI</span>
                             </h1>
                             <p className="text-[10px] text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
-                                Анализ рисков
+                                {t('nav.riskAnalysis')}
                             </p>
                         </div>
                     </div>
@@ -66,23 +75,49 @@ export default function Layout() {
                     ))}
                 </nav>
 
-                {/* Status Footer */}
-                <div className="p-4 border-t border-[hsl(var(--border))]">
+                {/* Language Switcher + Status Footer */}
+                <div className="p-4 border-t border-[hsl(var(--border))] space-y-3">
+                    {/* Lang toggle */}
+                    <div className="flex items-center gap-2">
+                        <Languages className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
+                        <div className="flex rounded-md overflow-hidden border border-[hsl(var(--border))] text-xs">
+                            <button
+                                onClick={() => { i18n.changeLanguage('ru'); localStorage.setItem('lang', 'ru'); }}
+                                className={`px-3 py-1 font-semibold transition-colors ${i18n.language === 'ru'
+                                    ? 'bg-[hsl(var(--primary))] text-black'
+                                    : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
+                                    }`}
+                            >
+                                RU
+                            </button>
+                            <button
+                                onClick={() => { i18n.changeLanguage('kz'); localStorage.setItem('lang', 'kz'); }}
+                                className={`px-3 py-1 font-semibold transition-colors ${i18n.language === 'kz'
+                                    ? 'bg-[hsl(var(--primary))] text-black'
+                                    : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
+                                    }`}
+                            >
+                                KZ
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* API Status */}
                     <div className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
                         <Activity className="w-3.5 h-3.5" />
-                        <span>API:</span>
+                        <span>{t('common.apiStatus')}</span>
                         {health?.status === 'ok' ? (
                             <span className="flex items-center gap-1 text-[hsl(var(--primary))]">
                                 <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--primary))] animate-pulse" />
-                                Онлайн
+                                {t('common.online')}
                             </span>
                         ) : (
-                            <span className="text-[hsl(var(--destructive))]">Офлайн</span>
+                            <span className="text-[hsl(var(--destructive))]">{t('common.offline')}</span>
                         )}
                     </div>
                     {health?.total_lots !== undefined && (
-                        <p className="text-[10px] text-[hsl(var(--muted-foreground))] mt-1">
-                            {health.total_lots.toLocaleString()} лотов в базе
+                        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                            {t('common.lotsInDb', { count: health.total_lots })}
                         </p>
                     )}
                 </div>

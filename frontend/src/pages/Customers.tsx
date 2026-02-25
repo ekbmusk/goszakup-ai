@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { formatBudget } from '@/types/api';
 import {
     Building2,
     SearchIcon,
-    BarChart3,
     AlertTriangle,
     Loader2,
     ChevronRight,
@@ -22,13 +22,14 @@ interface Customer {
 }
 
 export default function Customers() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState<'lot_count' | 'total_budget' | 'avg_risk_score'>('lot_count');
-    const [sortDesc, setSortDesc] = useState(true);
+    const [sortDesc] = useState(true);
     const [page, setPage] = useState(0);
     const [total, setTotal] = useState(0);
     const pageSize = 20;
@@ -74,10 +75,10 @@ export default function Customers() {
             <div>
                 <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
                     <Building2 className="w-6 h-6" />
-                    Заказчики
+                    {t('customers.title')}
                 </h1>
                 <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                    Просмотр заказчиков и их закупок
+                    {t('customers.subtitle')}
                 </p>
             </div>
 
@@ -87,7 +88,7 @@ export default function Customers() {
                     <SearchIcon className="absolute left-3 top-2.5 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                     <input
                         type="text"
-                        placeholder="Поиск по названию или BIN..."
+                        placeholder={t('customers.searchPlaceholder')}
                         value={search}
                         onChange={(e) => {
                             setSearch(e.target.value);
@@ -104,9 +105,9 @@ export default function Customers() {
                     }}
                     className="px-4 py-2 rounded-lg bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]"
                 >
-                    <option value="lot_count">По количеству лотов</option>
-                    <option value="total_budget">По общему бюджету</option>
-                    <option value="avg_risk_score">По среднему риску</option>
+                    <option value="lot_count">{t('common.sortByLotCount')}</option>
+                    <option value="total_budget">{t('common.sortByBudget')}</option>
+                    <option value="avg_risk_score">{t('common.sortByRisk')}</option>
                 </select>
             </div>
 
@@ -150,21 +151,21 @@ export default function Customers() {
                                             <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
                                                 {customer.lot_count}
                                             </div>
-                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">лотов</p>
+                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">{t('customers.lots')}</p>
                                         </div>
 
                                         <div className="text-right">
                                             <div className="text-sm font-semibold text-[hsl(var(--foreground))]">
                                                 {formatBudget(customer.total_budget)}
                                             </div>
-                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">бюджет</p>
+                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">{t('customers.budget')}</p>
                                         </div>
 
                                         <div className="text-right">
                                             <div className={`text-sm font-semibold ${getRiskColor(customer.avg_risk_score)}`}>
                                                 {customer.avg_risk_score}
                                             </div>
-                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">риск</p>
+                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">{t('customers.risk')}</p>
                                         </div>
 
                                         <div className="text-right">
@@ -173,7 +174,7 @@ export default function Customers() {
                                                     {customer.category_count}
                                                 </span>
                                             </div>
-                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">категорий</p>
+                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">{t('customers.categories')}</p>
                                         </div>
 
                                         {customer.high_critical_count > 0 && (
@@ -182,7 +183,7 @@ export default function Customers() {
                                                     <AlertTriangle className="w-4 h-4" />
                                                     {customer.high_critical_count}
                                                 </div>
-                                                <p className="text-xs text-[hsl(var(--muted-foreground))]">критичных</p>
+                                                <p className="text-xs text-[hsl(var(--muted-foreground))]">{t('customers.critical')}</p>
                                             </div>
                                         )}
 
@@ -196,7 +197,7 @@ export default function Customers() {
                     {/* Pagination */}
                     <div className="flex items-center justify-between mt-6">
                         <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                            Показано {page * pageSize + 1}-{Math.min((page + 1) * pageSize, total)} из {total}
+                            {t('common.showing', { from: page * pageSize + 1, to: Math.min((page + 1) * pageSize, total), total })}
                         </p>
                         <div className="flex gap-2">
                             <button
@@ -204,14 +205,14 @@ export default function Customers() {
                                 disabled={page === 0}
                                 className="px-3 py-2 rounded-lg bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] text-[hsl(var(--foreground))] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[hsl(var(--primary))] hover:text-white transition-colors"
                             >
-                                ← Назад
+                                {t('common.back')}
                             </button>
                             <button
                                 onClick={() => setPage(page + 1)}
                                 disabled={(page + 1) * pageSize >= total}
                                 className="px-3 py-2 rounded-lg bg-[hsl(var(--secondary))] border border-[hsl(var(--border))] text-[hsl(var(--foreground))] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[hsl(var(--primary))] hover:text-white transition-colors"
                             >
-                                Вперед →
+                                {t('common.forward')}
                             </button>
                         </div>
                     </div>
