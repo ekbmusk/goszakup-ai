@@ -15,7 +15,9 @@ COPY data/raw/ ./data/raw/
 COPY data/models/ ./data/models/
 COPY main.py .
 
-EXPOSE 8006
 
 
-CMD ["uvicorn", "src.api.routes:app", "--host", "0.0.0.0", "--port", "8006"]
+EXPOSE 8008
+
+# API_PORT передаётся через env (8008 dev / 8009 prod)
+CMD sh -c "uvicorn src.api.routes:app --host 0.0.0.0 --port ${API_PORT:-8008}"
