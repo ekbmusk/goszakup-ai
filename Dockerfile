@@ -21,4 +21,4 @@ COPY main.py .
 EXPOSE 8008
 
 # API_PORT передаётся через env (8008 dev / 8009 prod)
-CMD sh -c "uvicorn src.api.routes:app --host 0.0.0.0 --port ${API_PORT:-8008}"
+CMD ["sh", "-c", "uvicorn src.api.routes:app --host 0.0.0.0 --port ${API_PORT:-8008}"]

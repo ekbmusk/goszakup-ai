@@ -2,6 +2,7 @@
     "nav": {
         "dashboard": "Дашборд",
         "lots": "Лоты",
+        "compare": "Сравнение",
         "customers": "Заказчики",
         "categories": "Категории",
         "priceAnalysis": "Анализ по ценам",

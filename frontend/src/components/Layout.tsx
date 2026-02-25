@@ -14,7 +14,6 @@ import {
     Languages,
 } from 'lucide-react';
 import { useHealth } from '@/hooks/useApi';
-
 export default function Layout() {
     const { t, i18n } = useTranslation();
     const { data: health } = useHealth();
@@ -22,6 +21,7 @@ export default function Layout() {
     const navItems = [
         { to: '/', icon: LayoutDashboard, label: t('nav.dashboard') },
         { to: '/lots', icon: ListChecks, label: t('nav.lots') },
+        { to: '/compare', icon: FileSearch, label: t('nav.compare') },
         { to: '/customers', icon: Building2, label: t('nav.customers') },
         { to: '/categories', icon: FolderOpen, label: t('nav.categories') },
         { to: '/price-analysis', icon: TrendingUp, label: t('nav.priceAnalysis') },
