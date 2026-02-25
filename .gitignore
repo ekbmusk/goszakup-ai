@@ -11,6 +11,4 @@ venv*/
 .DS_Store
 
 # Artifacts
-catboost_info/
-data/models/
-data/processed/
+
