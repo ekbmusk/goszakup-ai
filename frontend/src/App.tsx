@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from '@/components/Layout';
+import LandingPage from '@/pages/LandingPage';
 import Dashboard from '@/pages/Dashboard';
 import LotsList from '@/pages/LotsList';
 import LotDetail from '@/pages/LotDetail';
@@ -16,8 +17,12 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Landing page — no sidebar/layout */}
+        <Route path="/" element={<LandingPage />} />
+
+        {/* Main app — with sidebar layout */}
         <Route element={<Layout />}>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/lots" element={<LotsList />} />
           <Route path="/lots/:lotId" element={<LotDetail />} />
           <Route path="/customers" element={<Customers />} />
