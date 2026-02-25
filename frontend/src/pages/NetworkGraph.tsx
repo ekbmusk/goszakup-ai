@@ -12,12 +12,8 @@ import {
     MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-<<<<<<< HEAD
-import { Loader2, ServerCrash, Network as NetworkIcon, Building2, Users } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-=======
 import { Loader2, ServerCrash, Network as NetworkIcon, Building2, Users, AlertTriangle, TrendingUp, DollarSign, ShoppingCart, X, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
->>>>>>> 28937e76 (compare adde)
+import { useTranslation } from 'react-i18next';
 
 interface NetworkNode {
     bin: string;
@@ -68,11 +64,8 @@ interface NetworkGraphData {
 type LayoutType = 'horizontal' | 'vertical' | 'circular' | 'grid';
 
 export default function NetworkGraph() {
-<<<<<<< HEAD
     const { t } = useTranslation();
-=======
     const navigate = useNavigate();
->>>>>>> 28937e76 (compare adde)
     const [data, setData] = useState<NetworkGraphData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -298,14 +291,9 @@ export default function NetworkGraph() {
                                     )}
                                     {node.name || node.bin}
                                 </div>
-<<<<<<< HEAD
-                                <div className="text-[10px] text-gray-500">
-                                    {node.total_lots} {t('common.lots')}
-=======
                                 <div className="text-[10px] opacity-70 flex items-center gap-1">
                                     <ShoppingCart className="w-2.5 h-2.5" />
-                                    {node.total_lots} лотов
->>>>>>> 28937e76 (compare adde)
+                                    {node.total_lots} {t('common.lots')}
                                 </div>
                                 {!isCustomer && riskPct > 50 && (
                                     <div className="text-[9px] font-bold text-red-900 mt-0.5">
@@ -484,27 +472,6 @@ export default function NetworkGraph() {
             </div>
 
             {/* Legend */}
-<<<<<<< HEAD
-            <div className="glass-card p-3 flex items-center gap-6 text-xs">
-                <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded" style={{ background: 'hsl(var(--primary))' }}></div>
-                    <span>{t('network.customers')}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded" style={{ background: 'hsl(var(--secondary))' }}></div>
-                    <span>{t('network.suppliers')}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded border-2" style={{
-                        background: 'hsl(var(--risk-high))',
-                        borderColor: 'hsl(var(--risk-critical))'
-                    }}></div>
-                    <span>{t('common.riskHigh')}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-0.5 bg-[hsl(var(--muted-foreground))]"></div>
-                    <span>{t('network.connections')}</span>
-=======
             <div className="glass-card p-3 space-y-2">
                 <div className="text-xs font-semibold text-[hsl(var(--muted-foreground))] mb-2">Обозначения:</div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
@@ -544,7 +511,6 @@ export default function NetworkGraph() {
                         <div className="w-8 h-0.5 bg-[hsl(var(--risk-high))] animate-pulse"></div>
                         <span>Активная связь (5+ контрактов)</span>
                     </div>
->>>>>>> 28937e76 (compare adde)
                 </div>
             </div>
 
