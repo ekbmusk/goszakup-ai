@@ -408,7 +408,7 @@ export class GoszakupApiClient {
     private retryAttempts: number;
 
     constructor(config: ApiClientConfig = {}) {
-        this.baseUrl = config.baseUrl || 'http://localhost:8006';
+        this.baseUrl = config.baseUrl || 'http://77.42.43.153:8008';
         this.timeout = config.timeout || 30000;
         this.retryAttempts = config.retryAttempts || 3;
     }
