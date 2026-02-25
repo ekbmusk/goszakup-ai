@@ -12,7 +12,7 @@ server {
     # Proxy API → backend container
     # API_UPSTREAM is set via envsubst at container startup
     location /api {
-        proxy_pass http://api:${API_PORT:-8008};
+        proxy_pass http://api:${API_PORT};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
