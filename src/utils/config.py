@@ -25,11 +25,7 @@ GOSZAKUP_GRAPHQL_URL = f"{GOSZAKUP_BASE_URL}/v3/graphql"
 
 # Безопасность API
 API_KEY = os.getenv("API_KEY", "")
-CORS_ALLOWED_ORIGINS = _parse_csv_env(
-    os.getenv("CORS_ALLOWED_ORIGINS", 
-             "http://127.0.0.1:8006,http://localhost:8006,http://localhost:3000,https://*.github.io,https://*.pages.dev,https://afm.software,https://www.afm.software"),
-    ["http://127.0.0.1:8006", "http://localhost:8006", "http://localhost:3000", "null"],
-)
+CORS_ALLOWED_ORIGINS = ["*"]
 
 # Обучение
 FORCE_TRAIN = os.getenv("FORCE_TRAIN", "0").strip().lower() in {"1", "true", "yes"}
