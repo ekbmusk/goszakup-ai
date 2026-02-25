@@ -12,11 +12,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8006',
+        target: 'http://77.42.43.153:8008',
         changeOrigin: true,
       },
       '/health': {
-        target: 'http://localhost:8006',
+        target: 'http://77.42.43.153:8008',
         changeOrigin: true,
       },
     },
