@@ -1,46 +1,52 @@
-# Запуск проекта
+# GoszakupAI
 
-## Docker (рекомендуется)
+Интеллектуальная система анализа рисков государственных закупок Казахстана.
+
+## Быстрый запуск (Локально)
+
+Для запуска проекта вам потребуются **Docker** и **Make**.
+
+### 1. Запуск через Docker (Рекомендуется)
+
+Самый простой способ запустить всё окружение одной командой:
 
 ```bash
 make start
 ```
 
-Сервисы:
+Эта команда:
+- Соберет Docker-образы для API и Frontend.
+- Запустит контейнеры в фоновом режиме.
+- Настроит проксирование запросов.
 
-- API: http://localhost:8006/docs
-- Frontend: http://localhost:5173
+**Доступ к системе:**
+- **Frontend:** [http://localhost:3000](http://localhost:3000)
+- **API (Swagger):** [http://localhost:8008/docs](http://localhost:8008/docs)
 
-Логи: `make logs`  
-Остановка: `make stop`
+### 2. Управление проектом
 
----
+Все основные команды доступны через `make`:
 
-## Локально
+- `make stop` — остановить контейнеры.
+- `make logs` — просмотр логов в реальном времени.
+- `make clean` — полная очистка контейнеров и образов.
+- `make health` — проверка доступности сервисов.
 
-### 1. Backend
+### 3. Локальная разработка (без Docker)
 
-```bash
-python3.11 -m venv .venv311
-source .venv311/bin/activate
-pip install -U pip
-pip install -r requirements.txt
-uvicorn src.api.routes:app --reload --port 8006
-```
+Если вы хотите запустить проект без Docker:
 
-### 2. Frontend
+1. **Backend:**
+   ```bash
+   make dev-setup    # Сздать venv
+   source .venv311/bin/activate
+   make dev-install  # Установить зависимости
+   make dev-backend  # Запустить API (порт 8008)
+   ```
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
----
-
-## Команды
-
-- `make help` - все команды
-- `make build` - собрать образы
-- `make logs-api` - логи API
-- `make clean` - очистка
+2. **Frontend:**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev       # Запустить Vite (порт 5173 или 3000)
+   ```
