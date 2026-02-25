@@ -10,7 +10,7 @@ import type {
     CategoryPricingDetail,
 } from '@/types/api';
 
-const BASE_URL = '';
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://77.42.43.153:8080').replace(/\/$/, '');
 
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(`${BASE_URL}${endpoint}`, {
