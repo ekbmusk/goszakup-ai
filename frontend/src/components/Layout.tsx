@@ -15,6 +15,21 @@ import {
 } from 'lucide-react';
 import { useHealth } from '@/hooks/useApi';
 
+<<<<<<< HEAD
+=======
+const navItems = [
+    { to: '/', icon: LayoutDashboard, label: 'Дашборд' },
+    { to: '/lots', icon: ListChecks, label: 'Лоты' },
+    { to: '/compare', icon: FileSearch, label: 'Сравнение' },
+    { to: '/customers', icon: Building2, label: 'Заказчики' },
+    { to: '/categories', icon: FolderOpen, label: 'Категории' },
+    { to: '/price-analysis', icon: TrendingUp, label: 'Анализ по ценам' },
+    { to: '/timeline', icon: LineChart, label: 'Временная динамика' },
+    { to: '/network', icon: Network, label: 'Граф связей' },
+    { to: '/analyze', icon: Shield, label: 'Анализ текста' },
+];
+
+>>>>>>> 28937e76 (compare adde)
 export default function Layout() {
     const { t, i18n } = useTranslation();
     const { data: health } = useHealth();

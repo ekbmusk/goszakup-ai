@@ -343,7 +343,7 @@ export default function Dashboard() {
                                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                                             {lot.rule_analysis.highlights.slice(0, 2).map((h, j) => (
                                                 <span key={j} className="text-[10px] px-2 py-0.5 rounded-full bg-[hsla(var(--risk-high),0.1)] text-[hsl(var(--risk-high))]">
-                                                    {typeof h === 'string' ? h.replace(/^⚠️\s*/, '') : String(h)}
+                                                    {typeof h === 'string' ? h : String(h)}
                                                 </span>
                                             ))}
                                         </div>

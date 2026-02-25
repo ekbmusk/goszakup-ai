@@ -32,9 +32,9 @@ The frontend communicates with the GoszakupAI backend API. All API endpoints are
 ```typescript
 import { GoszakupApiClient, RiskLevel } from './types/api';
 
-// Initialize client (defaults to localhost:8000)
+// Initialize client (defaults to localhost:8006)
 const client = new GoszakupApiClient({
-  baseUrl: 'http://localhost:8000',
+  baseUrl: 'http://localhost:8006',
   timeout: 30000
 });
 

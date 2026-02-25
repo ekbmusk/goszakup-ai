@@ -408,7 +408,7 @@ export class GoszakupApiClient {
     private retryAttempts: number;
 
     constructor(config: ApiClientConfig = {}) {
-        this.baseUrl = config.baseUrl || 'http://localhost:8000';
+        this.baseUrl = config.baseUrl || 'http://localhost:8006';
         this.timeout = config.timeout || 30000;
         this.retryAttempts = config.retryAttempts || 3;
     }
@@ -718,6 +718,17 @@ export class GoszakupApiClient {
             `/api/network/${encodeURIComponent(binId)}`
         );
     }
+
+    /**
+     * Compare multiple lots side by side
+     */
+    async compareLots(lotIds: string[]): Promise<any> {
+        return this.fetch<any>('/api/lots/compare', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lot_ids: lotIds }),
+        });
+    }
 }
 
 // ============================================================================
@@ -811,7 +822,7 @@ export function getSeverityBadge(severity: RuleSeverity): {
  * Example: Initialize API client and get high-risk lots
  * 
  * Usage in component:
- * const client = new GoszakupApiClient({ baseUrl: 'http://localhost:8000' });
+ * const client = new GoszakupApiClient({ baseUrl: 'http://localhost:8006' });
  * const lots = await client.getHighRiskLots();
  */
 export async function exampleGetHighRiskLots(): Promise<void> {

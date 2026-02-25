@@ -30,6 +30,22 @@ class AnalysisResult:
     highlights: list = field(default_factory=list)
     datanomix_codes: list = field(default_factory=list)
     def to_dict(self):
+        # Convert highlights from dict format to readable strings
+        highlights_readable = []
+        highlight_types = {
+            "brand": "🏷️ Бренд",
+            "proprietary": "🔐 Закрытая технология",
+            "precision": "📐 Сверхточная характеристика",
+            "no_analog": "🚫 Запрет аналогов",
+            "homoglyph": "🔤 Похожие символы",
+            "luxury": "✨ Представительский класс",
+        }
+        for h in self.highlights:
+            if isinstance(h, dict) and "type" in h:
+                h_type = h.get("type", "unknown")
+                h_label = highlight_types.get(h_type, h_type)
+                highlights_readable.append(h_label)
+        
         return {
             "lot_id": self.lot_id,
             "risk_score": round(self.risk_score, 1),
@@ -38,7 +54,7 @@ class AnalysisResult:
             "rules_passed_count": len(self.rules_passed),
             "total_rules_checked": self.total_rules_checked,
             "summary_ru": self.summary_ru,
-            "highlights": self.highlights,
+            "highlights": highlights_readable,  # Return readable strings instead of dicts
             "datanomix_codes": self.datanomix_codes,
         }
 

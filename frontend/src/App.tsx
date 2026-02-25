@@ -4,6 +4,7 @@ import LandingPage from '@/pages/LandingPage';
 import Dashboard from '@/pages/Dashboard';
 import LotsList from '@/pages/LotsList';
 import LotDetail from '@/pages/LotDetail';
+import CompareLots from '@/pages/CompareLots';
 import ManualAnalysis from '@/pages/ManualAnalysis';
 import PriceAnalysis from '@/pages/PriceAnalysis';
 import Customers from '@/pages/Customers';
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/lots" element={<LotsList />} />
           <Route path="/lots/:lotId" element={<LotDetail />} />
+          <Route path="/compare" element={<CompareLots />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/customers/:customerBin" element={<CustomerDetail />} />
           <Route path="/categories" element={<Categories />} />

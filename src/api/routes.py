@@ -5,6 +5,7 @@ REST API for the analysis platform.
 import logging
 import csv
 import io
+import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -29,11 +30,23 @@ logger = logging.getLogger(__name__)
 
 analyzer: Optional[GoszakupAnalyzer] = None
 
+# Register fonts for PDF generation with Cyrillic support
+def register_fonts():
+    """Register DejaVu Sans fonts for PDF generation"""
+    try:
+        font_base = '/usr/local/lib/python3.11/site-packages/matplotlib/mpl-data/fonts/ttf'
+        pdfmetrics.registerFont(TTFont('DejaVu', f'{font_base}/DejaVuSans.ttf'))
+        pdfmetrics.registerFont(TTFont('DejaVu-Bold', f'{font_base}/DejaVuSans-Bold.ttf'))
+        logger.info("[API] Registered DejaVu fonts for PDF generation")
+    except Exception as e:
+        logger.warning(f"[API] Could not register DejaVu fonts: {e}")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global analyzer
     logger.info("[API] Starting GoszakupAI...")
+    register_fonts()  # Register fonts for PDF
     analyzer = GoszakupAnalyzer(use_transformers=False)
     analyzer.initialize()
     analyzer.start_background_analysis(batch_size=50, sleep_seconds=0.05)
@@ -148,6 +161,8 @@ async def list_lots(
             r for r in results
             if search_lower in r.lot_data.get("name_ru", "").lower()
             or search_lower in r.lot_data.get("desc_ru", "").lower()
+            or search_lower in r.lot_data.get("extra_desc_ru", "").lower()
+            or search_lower in r.lot_data.get("category_name", "").lower()
             or search_lower in str(r.lot_id).lower()
             or (search_normalized and search_normalized in str(r.lot_id).lower())
         ]
@@ -215,6 +230,47 @@ async def analyze_lot(lot_id: str):
     return result.to_dict()
 
 
+class CompareLotsRequest(BaseModel):
+    """Request model for lot comparison."""
+    lot_ids: list[str]
+
+
+@app.post("/api/lots/compare")
+async def compare_lots(request: CompareLotsRequest):
+    """Compare multiple lots side by side."""
+    if not analyzer:
+        raise HTTPException(503, "Analyzer not ready")
+
+    lot_ids = request.lot_ids
+    if not lot_ids or len(lot_ids) < 2:
+        raise HTTPException(400, "At least 2 lot IDs required for comparison")
+
+    if len(lot_ids) > 10:
+        raise HTTPException(400, "Maximum 10 lots can be compared")
+
+    lots_data = []
+    for lot_id in lot_ids:
+        try:
+            result = analyzer.analyze_lot(lot_id)
+            if result.lot_data:
+                lots_data.append(result.to_dict())
+        except:
+            pass  # Skip missing lots
+
+    if not lots_data:
+        raise HTTPException(404, "No lots found for comparison")
+
+    # Prepare comparison data
+    comparison = {
+        "lots": lots_data,
+        "count": len(lots_data),
+        "high_risk_count": sum(1 for l in lots_data if l["final_level"] in ("HIGH", "CRITICAL")),
+        "avg_risk_score": round(sum(l["final_score"] for l in lots_data) / len(lots_data), 1) if lots_data else 0,
+    }
+
+    return comparison
+
+
 @app.get("/api/lots/{lot_id}/export/pdf")
 async def export_lot_pdf(lot_id: str):
     """Экспорт анализа лота в PDF формате."""
@@ -230,17 +286,24 @@ async def export_lot_pdf(lot_id: str):
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, 
                            topMargin=2*cm, bottomMargin=2*cm)
     
-    # Styles
+    # Styles with Cyrillic support
     styles = getSampleStyleSheet()
+    
+    # Override Normal style to use DejaVu
+    styles['Normal'].fontName = 'DejaVu'
+    styles['Normal'].fontSize = 10
+    
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
+        fontName='DejaVu-Bold',
         fontSize=16,
         spaceAfter=12,
     )
     heading_style = ParagraphStyle(
         'CustomHeading',
         parent=styles['Heading2'],
+        fontName='DejaVu-Bold',
         fontSize=12,
         spaceAfter=8,
         textColor=colors.HexColor('#1a365d'),
@@ -282,7 +345,8 @@ async def export_lot_pdf(lot_id: str):
     
     lot_table = Table(lot_details, colWidths=[4*cm, 12*cm])
     lot_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (0, -1), 'DejaVu-Bold'),
+        ('FONTNAME', (1, 0), (1, -1), 'DejaVu'),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
     ]))
@@ -294,10 +358,17 @@ async def export_lot_pdf(lot_id: str):
         story.append(Paragraph(f"<b>Обнаружено нарушений: {len(result.rule_analysis.rules_triggered)}</b>", heading_style))
         
         for rule in result.rule_analysis.rules_triggered[:10]:  # Top 10 rules
-            rule_text = f"<b>{rule.get('rule_name_ru', 'N/A')}</b><br/>"
-            rule_text += f"<i>{rule.get('explanation_ru', '')}</i><br/>"
-            rule_text += f"Вес: {rule.get('weight', 0):.1f}, "
-            rule_text += f"Балл: {rule.get('raw_score', 0):.1f}"
+            # Convert RuleMatch object to dict if needed
+            rule_dict = rule.to_dict() if hasattr(rule, 'to_dict') else rule
+            rule_name = rule_dict.get('rule_name_ru', rule_dict.get('rule_id', 'N/A')) if isinstance(rule_dict, dict) else rule.rule_name_ru
+            explanation = rule_dict.get('explanation_ru', '') if isinstance(rule_dict, dict) else rule.explanation_ru
+            weight = rule_dict.get('weight', 0) if isinstance(rule_dict, dict) else rule.weight
+            raw_score = rule_dict.get('raw_score', 0) if isinstance(rule_dict, dict) else rule.raw_score
+            
+            rule_text = f"<b>{rule_name}</b><br/>"
+            rule_text += f"<i>{explanation}</i><br/>"
+            rule_text += f"Вес: {weight:.1f}, "
+            rule_text += f"Балл: {raw_score:.1f}"
             
             story.append(Paragraph(rule_text, styles['Normal']))
             story.append(Spacer(1, 0.2*cm))
@@ -324,7 +395,9 @@ async def export_lot_pdf(lot_id: str):
     doc.build(story)
     buffer.seek(0)
     
-    filename = f"lot_analysis_{result.lot_id}_{datetime.now().strftime('%Y%m%d')}.pdf"
+    # Use only ASCII chars in filename to avoid encoding issues
+    lot_id_safe = hashlib.md5(result.lot_id.encode()).hexdigest()[:8]
+    filename = f"lot_analysis_{lot_id_safe}_{datetime.now().strftime('%Y%m%d')}.pdf"
     
     return StreamingResponse(
         iter([buffer.getvalue()]),

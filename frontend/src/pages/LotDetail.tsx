@@ -383,6 +383,34 @@ export default function LotDetail() {
                     )}
                 </div>
 
+                {/* Description Section */}
+                {(lot.desc_ru || lot.extra_desc_ru) && (
+                    <div className="mt-4 pt-4 border-t border-[hsl(var(--border))]">
+                        <div className="space-y-3">
+                            {lot.desc_ru && (
+                                <div>
+                                    <h3 className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase flex items-center gap-1 mb-2">
+                                        <FileText className="w-3 h-3" /> Описание закупки
+                                    </h3>
+                                    <p className="text-sm leading-relaxed text-[hsl(var(--foreground))] bg-[hsl(var(--secondary))] p-3 rounded-lg whitespace-pre-wrap">
+                                        {lot.desc_ru}
+                                    </p>
+                                </div>
+                            )}
+                            {lot.extra_desc_ru && (
+                                <div>
+                                    <h3 className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase flex items-center gap-1 mb-2">
+                                        <FileText className="w-3 h-3" /> Дополнительная информация
+                                    </h3>
+                                    <p className="text-sm leading-relaxed text-[hsl(var(--foreground))] bg-[hsl(var(--secondary))] p-3 rounded-lg whitespace-pre-wrap">
+                                        {lot.extra_desc_ru}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* Customer Info */}
                 {(lot.customer_bin || lot.customer_name) && (
                     <div className="mt-4 pt-4 border-t border-[hsl(var(--border))]">
