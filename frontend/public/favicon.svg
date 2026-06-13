@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="hsl(142,71%,55%)"/>
+      <stop offset="1" stop-color="hsl(142,71%,38%)"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="hsl(160,12%,7%)"/>
+  <!-- Щит (надзор/госконтроль) -->
+  <path d="M32 9l17 6v13c0 12-7.6 20.4-17 24-9.4-3.6-17-12-17-24V15l17-6z" fill="url(#g)"/>
+  <!-- Лупа (анализ рисков) -->
+  <g fill="none" stroke="hsl(160,12%,7%)" stroke-width="3.4" stroke-linecap="round">
+    <circle cx="29" cy="29" r="8.5"/>
+    <line x1="35.5" y1="35.5" x2="42" y2="42"/>
+  </g>
+</svg>

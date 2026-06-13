@@ -6,6 +6,7 @@ import {
     AlertTriangle, CheckCircle, Zap, Lock
 } from 'lucide-react';
 import { Marquee } from '@/components/ui/marquee';
+import { MaintenanceBar, DisclaimerBanner } from '@/components/Notices';
 
 const statValues = ['2 059', '91%', '10+', '999', '<1 с'];
 
@@ -114,8 +115,14 @@ export default function LandingPage() {
                 </div>
             </nav>
 
+            {/* ── Уведомления: техработы + дисклеймер ─────── */}
+            <div className="mx-auto w-full max-w-5xl space-y-3 px-6 pb-2 pt-24 sm:px-10">
+                <MaintenanceBar />
+                <DisclaimerBanner />
+            </div>
+
             {/* ── Hero ─────────────────────────────────────── */}
-            <section className="relative flex min-h-screen flex-col justify-end overflow-hidden pt-20">
+            <section className="relative flex min-h-screen flex-col justify-end overflow-hidden pt-10">
                 <div
                     className="absolute inset-0 bg-cover bg-center"
                     style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1800&q=80)' }}

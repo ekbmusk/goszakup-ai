@@ -14,6 +14,7 @@ import {
     Languages,
 } from 'lucide-react';
 import { useHealth } from '@/hooks/useApi';
+import { TopNotices } from '@/components/Notices';
 export default function Layout() {
     const { t, i18n } = useTranslation();
     const { data: health } = useHealth();
@@ -126,6 +127,7 @@ export default function Layout() {
             {/* Main Content */}
             <main className="flex-1 overflow-y-auto scrollbar-none">
                 <div className="p-6 max-w-7xl mx-auto">
+                    <TopNotices />
                     <Outlet />
                 </div>
             </main>
