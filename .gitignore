@@ -10,7 +10,12 @@ venv*/
 # OS
 .DS_Store
 
-# Artifacts
+# Artifacts (генерируются при обучении/запуске — не коммитим)
+catboost_info/
+data/processed/catboost_train.csv
+data/processed/catboost_train.json
+data/processed/catboost_train_vectors.json
+data/processed/analysis_cache.json
 
 # Secrets / local env (содержат токены — НЕ коммитить)
 .env
