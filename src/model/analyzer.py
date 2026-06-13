@@ -22,6 +22,8 @@ from src.utils.config import (
     LABELS_CSV,
     PROCESSED_DIR,
     RAW_DIR,
+    INGEST_MAX_PAGES,
+    INGEST_PAGE_SIZE,
 )
 
 logger = logging.getLogger(__name__)
@@ -108,9 +110,11 @@ class GoszakupAnalyzer:
         if lots is not None:
             self._lots = lots
         else:
-            # Load all available lots (increase max_pages for real data)
-            # With page_size=50, max_pages=210 = 10,500 lots
-            self._lots = self.client.collect_all_lots(max_pages=210, page_size=50)
+            # Объём управляется через INGEST_MAX_PAGES / INGEST_PAGE_SIZE.
+            # Local: пагинация в памяти (быстро). Remote: курсорная пагинация живого API.
+            self._lots = self.client.collect_all_lots(
+                max_pages=INGEST_MAX_PAGES, page_size=INGEST_PAGE_SIZE
+            )
 
         logger.info(f"[Analyzer] 📊 Loaded {len(self._lots)} lots")
 
@@ -126,7 +130,12 @@ class GoszakupAnalyzer:
 
         self.vectorizer.build_index(self._lots)
         self.network.build_graph(self._lots)
-        self._load_analysis_cache()
+        # В remote-режиме лоты свежие (другие lot_id) — старый кэш не подходит,
+        # считаем анализ заново, чтобы не смешивать с устаревшими локальными данными.
+        if getattr(self.client, "use_remote_api", False):
+            logger.info("[Analyzer] Remote mode — skipping stale local analysis cache")
+        else:
+            self._load_analysis_cache()
         has_real_data = len(self._lots) > 100
         
         should_retrain = FORCE_TRAIN or has_real_data or not self.scorer.is_fitted

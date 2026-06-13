@@ -20,5 +20,5 @@ COPY main.py .
 
 EXPOSE 8008
 
-# API_PORT передаётся через env (8008 dev / 8009 prod)
-CMD ["sh", "-c", "uvicorn src.api.routes:app --host 0.0.0.0 --port ${API_PORT:-8008}"]
+# Порт: Railway/облако задаёт $PORT; локально — API_PORT (8008 dev / 8009 prod)
+CMD ["sh", "-c", "uvicorn src.api.routes:app --host 0.0.0.0 --port ${PORT:-${API_PORT:-8008}}"]

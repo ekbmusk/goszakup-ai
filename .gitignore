@@ -12,3 +12,8 @@ venv*/
 
 # Artifacts
 
+# Secrets / local env (содержат токены — НЕ коммитить)
+.env
+.env.local
+envs/*.secret.env
+

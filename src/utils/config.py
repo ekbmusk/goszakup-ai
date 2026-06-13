@@ -27,6 +27,10 @@ GOSZAKUP_GRAPHQL_URL = f"{GOSZAKUP_BASE_URL}/v3/graphql"
 API_KEY = os.getenv("API_KEY", "")
 CORS_ALLOWED_ORIGINS = ["*"]
 
+# Сбор данных с живого API (используется только в remote-режиме)
+INGEST_MAX_PAGES = int(os.getenv("INGEST_MAX_PAGES", "210"))
+INGEST_PAGE_SIZE = int(os.getenv("INGEST_PAGE_SIZE", "50"))
+
 # Обучение
 FORCE_TRAIN = os.getenv("FORCE_TRAIN", "0").strip().lower() in {"1", "true", "yes"}
 EXPORT_TRAIN_DATA = os.getenv("EXPORT_TRAIN_DATA", "0").strip().lower() in {"1", "true", "yes"}
